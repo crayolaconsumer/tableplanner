@@ -1,87 +1,95 @@
-Wedding Table Plan Creator
+
+# Wedding Table Plan Creator
+
 A user‐friendly web application that helps you plan your wedding seating arrangement. Create circle or rectangle tables, specify the number of seats, manage guest names (with CSV import or manual addition), and drag/drop them into seats.
 
-When a seat is occupied, you see the occupant’s short label (e.g. “AG”) or small icon to keep the interface visually clean. For more details (full name, edit/remove buttons), open the seat’s assignment modal.
+When a seat is occupied, it shows a short label (e.g. an icon or initials) to keep the interface clean. For full occupant details (e.g., editing or removing a guest), open the seat’s assignment modal.
 
-Features
-Zoom & Pan Canvas
+## Features
 
-Scroll the mouse wheel on the table plan area to zoom in or out.
-Click and drag on any empty canvas area to pan.
-Create & Edit Tables
+- **Zoom & Pan Canvas**  
+  - Scroll the mouse wheel on the table plan area to zoom in or out.  
+  - Click and drag on any empty part of the plan to pan around.
 
-Support for circle or rectangle tables.
-Specify how many seats each table has.
-Change the number of seats at any time—already‐assigned guests in seats that “disappear” are moved back to the Unassigned People list.
-Unassigned People
+- **Create & Edit Tables**  
+  - Create circle or rectangle tables, each with a configurable number of seats.  
+  - Change the seat count anytime; any extra seated guests are automatically unassigned.  
+  - Remove a table (returns its seated guests to the Unassigned list).
 
-Add new guests manually or import from a CSV (simple one‐column format).
-Search bar to filter by name.
-Drag guests from the unassigned panel into any table seat (or back from a seat to unassigned).
-Assignment Modal
+- **Unassigned People**  
+  - Add new guests manually or import a CSV file (one name per line).  
+  - Search bar for filtering by name in the unassigned list.  
+  - Drag & drop guests from the left panel into seats (or back).
 
-Click any seat to open an assignment modal, where you can pick a guest from the unassigned list.
-Clear a seat’s occupant using the “Clear Seat” button.
-Random Assignment
+- **Assignment Modal**  
+  - Click on any seat to open a modal with an unassigned guest list.  
+  - Clear the seat’s occupant with the “Clear Seat” button.
 
-Optionally fill all available seats with unassigned guests at random, for quick drafting or “inspiration.”
-Export/Import State
+- **Random Assignment**  
+  - Automatically fill as many free seats as there are unassigned guests, choosing guests at random.
 
-Export your entire plan (tables & assigned/unassigned guests) to a JSON file.
-Later import that file to restore the state.
-Print
+- **Export/Import State**  
+  - Export the entire plan (tables and guest assignments) to JSON.  
+  - Import that JSON file later to restore all data.
 
-Generates a human‐readable seating list (table names, seat indices, occupant names) in a new window, which you can then print or save as PDF.
-Getting Started
-Clone or Download this repository.
-Open index.html in your browser (no server required for basic usage).
-Add Tables: Click “New Table” → Enter table name, choose circle or rectangle, specify seat count.
-Add Guests:
-Use the small “Add guest” form (left panel).
-Or click “Choose file” to import a CSV with guest names (one per line).
-Assign Guests:
-Drag a guest from “Unassigned People” onto any seat.
-Or open a seat’s assignment modal and choose a guest from the list.
-Usage
-Zoom: Move the mouse pointer over the table plan area and scroll your mouse wheel.
-Pan: Click and drag on an empty area of the plan.
-Drag & Drop:
-Drag from the left “Unassigned People” panel to a seat (or from a seat back to “Unassigned People”).
-If a seat is already filled, that occupant is automatically unassigned.
-Editing a Table:
-“Rename” changes the table name.
-“Edit Seats” changes how many seats the table has; guests over the new seat limit are returned to “Unassigned People.”
-“Remove” deletes the table (all seated guests are moved to “Unassigned People”).
-CSV Import Format
-A simple CSV with one guest name per line in the first column is sufficient.
-Example:
-nginx
-Copy
-Edit
+- **Print**  
+  - Generate a basic human‐readable list of all tables, seat indexes, and occupant names.
+
+## Getting Started
+
+1. **Clone/Download** this repository.  
+2. **Open `index.html`** in your web browser (no server needed).  
+3. **Add Tables**: Click “New Table,” pick circle or rectangle, enter a name and seat count.  
+4. **Add Guests**:  
+   - Use the “Add guest” form on the left panel.  
+   - Or import a CSV file (one name per line, or names in the first column).  
+5. **Assign Guests**:  
+   - Drag a guest from “Unassigned People” onto a seat.  
+   - Or click a seat to open the assignment modal and pick a guest.  
+   - If a seat is filled, dragging another guest onto it unassigns the old occupant.
+
+## Usage
+
+- **Zoom**: Hover over the table plan and scroll your mouse wheel (1.05 scale factor per tick).  
+- **Pan**: Click and drag on empty space in the plan to move around.  
+- **Edit Tables**:  
+  - “Rename” updates a table’s name.  
+  - “Edit Seats” changes seat count. Guests above the new seat count return to “Unassigned People.”  
+  - “Remove” deletes the table. Occupants become unassigned.  
+- **Print**: Click “Print Plan” to open a simple page listing all tables and seat assignments.  
+
+## CSV Import Format
+
+A basic CSV with **one guest name per line** (or first column) is enough:
+
+```
 Alice
 Bob
-Carol
-How It Works
-People
-Each unassigned person is a draggable “card” with optional edit/remove buttons.
-Seats
-Each seat is a small circle. When a seat is filled, it turns green and displays the occupant’s short label (or an icon).
-Random Assign
-Automatically seats as many unassigned guests as there are free seats.
-Technical Details
-Pure HTML, CSS, and JavaScript, plus Bootstrap 5 for styling and modals.
-No build process required; simply open index.html in your browser.
-All data is stored in the DOM; no server or database needed.
-Customization
-Styling: Tweak index.html’s <style> section or override with your own CSS file.
-Zoom Behavior: Adjust the zoomFactor in tablePlanEl.addEventListener('wheel', ...).
-Seat Appearance: Change .seat in CSS for different shapes, sizes, or occupant display.
-Popover Approach: If you prefer to display occupant details in a popover (rather than a seat modal), see the Bootstrap Popover docs for examples.
-Contributing
-Fork this repository.
-Create a feature branch (git checkout -b new-feature).
-Commit your changes (git commit -am 'Add new feature').
-Push to the branch (git push origin new-feature).
-Create a Pull Request.
-License
-This project is free for personal and commercial use. No specific license is enforced, but you are welcome to add an open‐source license of your choice to encourage collaboration.
+Charlie
+```
+
+## Technical Details
+
+- **No server required**: Open `index.html` locally.  
+- **Bootstrap 5**: Used for modals, layout, and some styling.  
+- **DOM-based**: Data is kept in the DOM; any changes are ephemeral unless you export JSON.  
+
+## Customization
+
+- **Styling**: Tweak the inline `<style>` in `index.html` or add a separate CSS file.  
+- **Seat Behavior**: Edit the `.seat` class for different shapes/sizes.  
+- **Zoom Factor**: Adjust the `zoomFactor` in the `wheel` event handler.  
+- **Initials vs. Icon**: Currently, seats display a short occupant label. Adapt as needed (e.g. show full name, or store occupant data in a popover tooltip).
+
+## Contributing
+
+1. **Fork** this repo.  
+2. **Create a branch** for your feature (`git checkout -b feature/myFeature`).  
+3. **Commit & push** (`git commit -am 'Add new feature'`, then `git push`).  
+4. **Open a Pull Request** to merge into the main branch.
+
+## License
+
+This project is free for personal and commercial use. Feel free to add your own license if you want to make it explicitly open-source. Enjoy customizing and improving the Wedding Table Plan Creator!
+
+---
