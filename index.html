@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wedding Table Plan Creator</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Overall look and feel */
+    body {
+      background-color: #f5f7fa;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container-fluid {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2, h5 {
+      color: #333;
+    }
+    /* Top Controls */
+    #controls {
+      margin-bottom: 20px;
+    }
+    /* Panels styling */
+    #people-container, #table-plan {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+    }
+    /* The table plan area now contains a zoomable/pannable canvas */
+    #table-plan {
+      overflow: hidden;
+      height: 600px;
+      position: relative;
+    }
+    /* Increase the canvas size to allow for many tables */
+    #canvas {
+      transform-origin: top left;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4000px;
+      height: 4000px;
+    }
+    /* Unassigned people list */
+    #people-list .person {
+      margin-bottom: 10px;
+    }
+    /* Guest controls container */
+    .guest-controls {
+      margin-left: auto;
+      display: flex;
+      gap: 4px;
+    }
+    .guest-controls button {
+      background: transparent;
+      border: none;
+      color: #007bff;
+      cursor: pointer;
+      padding: 0 4px;
+      transition: transform 0.2s;
+    }
+    .guest-controls button:hover {
+      transform: scale(1.2);
+    }
+    /* Person element styling with card effect on hover */
+    .person {
+      padding: 8px 12px;
+      background: #e7f3ff;
+      border: 1px solid #99caff;
+      border-radius: 4px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+      position: relative;
+      z-index: 1;
+    }
+    .person:hover {
+      background: #d0e7ff;
+      z-index: 1000;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .person-icon {
+      margin-right: 8px;
+    }
+    /* Seat styling */
+    .seat {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border: 1px dashed #999;
+      border-radius: 50%;
+      position: absolute;
+      text-align: center;
+      line-height: 30px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .seat.filled {
+      background: #c2f0c2;
+      border: 1px solid #0a0;
+    }
+    .seat.over {
+      background: #fffae6;
+      border-color: #ff0;
+    }
+    /* Table card styling */
+    .table.card {
+      position: absolute;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      background: #fff;
+    }
+    .table.card .card-header {
+      background: #007bff;
+      color: #fff;
+      border-bottom: none;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      padding: 10px 15px;
+    }
+    /* For circle tables, display the table name on its own line above the controls */
+    .table.card.circle .card-header {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .table.card.circle .table-name {
+      font-size: 1.1em;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    .table.card .header-controls {
+      display: flex;
+      gap: 4px;
+    }
+    /* Print-friendly styling */
+    @media print {
+      body {
+        background: #fff;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+    /* Guest/Seat count display in the unassigned panel */
+    #guestSeatCounts {
+      font-size: 0.9em;
+      margin-bottom: 10px;
+    }
+    #guestSeatCounts .seat-count.over {
+      color: red;
+    }
+    @media print {
+  .guest-controls,
+  .person button {
+    display: none !important;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <!-- Top Controls (camera controls now use intuitive mouse actions) -->
+    <div id="controls" class="no-print">
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <label for="csv-file" class="form-label">Import Guest CSV (first column = name)</label>
+          <input type="file" id="csv-file" accept=".csv" class="form-control">
+        </div>
+        <div class="col-md-8 text-end">
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTableModal">
+            New Table
+          </button>
+          <button type="button" class="btn btn-secondary ms-2" id="randomAssignBtn">Random Assign</button>
+          <button type="button" class="btn btn-success ms-2" id="exportStateBtn">Export JSON</button>
+          <button type="button" class="btn btn-info ms-2" id="importStateBtn">Import JSON</button>
+          <button type="button" class="btn btn-warning ms-2" id="printPlanBtn">Print Plan</button>
+          <!-- Hidden file input for JSON state import -->
+          <input type="file" id="importStateFile" accept=".json" style="display:none;">
+        </div>
+      </div>
+      <p class="text-muted mt-2">Use your mouse wheel to zoom. Click and drag on any blank area (i.e. not on a table) to pan the canvas.</p>
+    </div>
+    <div class="row">
+      <!-- Left: Unassigned People Panel with Guest Count, Add Guest Form, and Search -->
+      <div class="col-md-3 mb-3 mb-md-0">
+        <div id="people-container">
+          <h5>Unassigned People</h5>
+          <!-- Guest/Seat counts -->
+          <div id="guestSeatCounts"></div>
+          <!-- Form to add a new guest -->
+          <form id="addGuestForm" class="mb-3">
+            <div class="input-group input-group-sm">
+              <input type="text" id="newGuestName" class="form-control" placeholder="Add guest" required>
+              <button class="btn btn-outline-primary" type="submit">Add</button>
+            </div>
+          </form>
+          <input type="text" id="people-search-input" class="form-control mb-3" placeholder="Search guests">
+          <div id="people-list"></div>
+        </div>
+      </div>
+      <!-- Right: Table Plan Area -->
+      <div class="col-md-9">
+        <div id="table-plan" class="position-relative">
+          <!-- The zoomable and pannable canvas -->
+          <div id="canvas"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Creating a New Table -->
+  <div class="modal fade" id="newTableModal" tabindex="-1" aria-labelledby="newTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+           <h5 class="modal-title" id="newTableModalLabel">Create New Table</h5>
+           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+           <form id="newTableForm">
+             <div class="mb-3">
+               <label for="tableName" class="form-label">Table Name</label>
+               <input type="text" class="form-control" id="tableName" required>
+             </div>
+             <div class="mb-3">
+               <label for="tableType" class="form-label">Table Type</label>
+               <select class="form-select" id="tableType">
+                 <option value="circle">Circle</option>
+                 <option value="rectangle">Rectangle</option>
+               </select>
+             </div>
+             <div class="mb-3">
+               <label for="seatCount" class="form-label">Number of Seats</label>
+               <input type="number" class="form-control" id="seatCount" value="8" min="1" required>
+             </div>
+             <button type="submit" class="btn btn-primary">Create Table</button>
+           </form>
+         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Assigning a Guest to a Seat -->
+  <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+           <h5 class="modal-title" id="assignmentModalLabel">Assign Guest</h5>
+           <button type="button" class="btn btn-danger" id="clearSeatBtn" style="display: none;     margin-left: 200px;">Clear Seat</button>
+           <button type="button" class="btn btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+           <input type="text" id="assignmentSearch" class="form-control mb-3" placeholder="Search guests">
+           <ul class="list-group" id="assignmentList"></ul>
+         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    /* ============================
+       Global variables for canvas zoom and pan
+    ============================ */
+    let canvasScale = 1.0,
+        canvasOffsetX = 0,
+        canvasOffsetY = 0,
+        isPanning = false,
+        panStartX = 0,
+        panStartY = 0,
+        startOffsetX = 0,
+        startOffsetY = 0;
+    
+    const tablePlanEl = document.getElementById('table-plan');
+    const canvasEl = document.getElementById('canvas');
+    function updateCanvasTransform() {
+      canvasEl.style.transform = `translate(${canvasOffsetX}px, ${canvasOffsetY}px) scale(${canvasScale})`;
+    }
+    
+    /* Use mouse wheel on the table plan area to zoom in and out (using a 1.05 factor) */
+    tablePlanEl.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const zoomFactor = 1.05;
+      if (e.deltaY < 0) {
+        canvasScale *= zoomFactor;
+      } else {
+        canvasScale /= zoomFactor;
+      }
+      updateCanvasTransform();
+    });
+    
+    /* Panning: click and drag on any blank area (not on a table) */
+    tablePlanEl.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.table.card')) return;
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      startOffsetX = canvasOffsetX;
+      startOffsetY = canvasOffsetY;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!isPanning) return;
+      canvasOffsetX = startOffsetX + (e.clientX - panStartX);
+      canvasOffsetY = startOffsetY + (e.clientY - panStartY);
+      updateCanvasTransform();
+    });
+    document.addEventListener('mouseup', function(e) {
+      isPanning = false;
+    });
+    
+    /* ============================
+       Guest (Person) Handling and Controls
+    ============================ */
+    let personCounter = 0;
+    function addPerson(name) {
+      personCounter++;
+      const person = document.createElement('div');
+      person.className = 'person';
+      person.id = 'person-' + personCounter;
+      person.draggable = true;
+      person.addEventListener('dragstart', handleDragStart);
+      
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'guest-name';
+      nameSpan.textContent = name;
+      
+      const controls = document.createElement('div');
+      controls.className = 'guest-controls';
+      const editBtn = document.createElement('button');
+      editBtn.title = "Edit guest";
+      editBtn.innerHTML = "✎";
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newName = prompt("Edit guest name:", nameSpan.textContent);
+        if (newName) {
+          nameSpan.textContent = newName;
+          updateCounts();
+        }
+      });
+      controls.appendChild(editBtn);
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.title = "Remove guest";
+      removeBtn.innerHTML = "✖";
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm("Remove this guest?")) {
+          person.remove();
+          updateCounts();
+        }
+      });
+      controls.appendChild(removeBtn);
+      
+      person.appendChild(document.createElement('span')).innerHTML = '<span class="person-icon">👤</span>';
+      person.appendChild(nameSpan);
+      person.appendChild(controls);
+      document.getElementById('people-list').appendChild(person);
+      updateCounts();
+    }
+    function createPersonElement(name) {
+      personCounter++;
+      const person = document.createElement('div');
+      person.className = 'person';
+      person.id = 'person-' + personCounter;
+      person.draggable = true;
+      person.addEventListener('dragstart', handleDragStart);
+      
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'guest-name';
+      nameSpan.textContent = name;
+      
+      const controls = document.createElement('div');
+      controls.className = 'guest-controls';
+      const editBtn = document.createElement('button');
+      editBtn.title = "Edit guest";
+      editBtn.innerHTML = "✎";
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newName = prompt("Edit guest name:", nameSpan.textContent);
+        if (newName) {
+          nameSpan.textContent = newName;
+          updateCounts();
+        }
+      });
+      controls.appendChild(editBtn);
+      const removeBtn = document.createElement('button');
+      removeBtn.title = "Remove guest";
+      removeBtn.innerHTML = "✖";
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm("Remove this guest?")) {
+          person.remove();
+          updateCounts();
+        }
+      });
+      controls.appendChild(removeBtn);
+      
+      person.appendChild(document.createElement('span')).innerHTML = '<span class="person-icon">👤</span>';
+      person.appendChild(nameSpan);
+      person.appendChild(controls);
+      return person;
+    }
+    function handleDragStart(e) {
+      e.dataTransfer.setData('text/plain', this.id);
+    }
+    
+    /* ============================
+       Drag & Drop on Seats and People List
+    ============================ */
+    function handleDragOver(e) {
+      e.preventDefault();
+      this.classList.add('over');
+    }
+    function handleDragLeave(e) {
+      this.classList.remove('over');
+    }
+    function handleDrop(e) {
+      e.preventDefault();
+      this.classList.remove('over');
+      const personId = e.dataTransfer.getData('text/plain');
+      const personElem = document.getElementById(personId);
+      if (personElem) {
+        if (this.classList.contains('seat') && this.children.length > 0) {
+          const existing = this.children[0];
+          document.getElementById('people-list').appendChild(existing);
+          this.classList.remove('filled');
+        }
+        const source = personElem.parentElement;
+        if (source && source.classList.contains('seat')) {
+          source.classList.remove('filled');
+        }
+        this.innerHTML = '';
+        this.appendChild(personElem);
+        if (this.classList.contains('seat')) {
+          this.classList.add('filled');
+        }
+        updateCounts();
+      }
+    }
+    const peopleList = document.getElementById('people-list');
+    peopleList.addEventListener('dragover', e => e.preventDefault());
+    peopleList.addEventListener('drop', function(e) {
+      e.preventDefault();
+      const personId = e.dataTransfer.getData('text/plain');
+      const personElem = document.getElementById(personId);
+      if (personElem) { this.appendChild(personElem); updateCounts(); }
+    });
+    
+    /* ============================
+       CSV Import for Guests
+    ============================ */
+    document.getElementById('csv-file').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        parseGuestCSV(text);
+      }
+      reader.readAsText(file);
+    });
+    function parseGuestCSV(text) {
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        if (line.trim() === '') return;
+        const columns = line.split(',');
+        const name = columns[0].trim();
+        if (name) { addPerson(name); }
+      });
+    }
+    
+    /* ============================
+       Search in Unassigned People
+    ============================ */
+    document.getElementById('people-search-input').addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      const persons = peopleList.getElementsByClassName('person');
+      for (let person of persons) {
+        person.style.display = person.textContent.toLowerCase().includes(query) ? 'flex' : 'none';
+      }
+    });
+    
+    /* ============================
+       Guest/Seat Count Display
+    ============================ */
+    function updateCounts() {
+      const allPersons = document.querySelectorAll('.person');
+      const totalGuests = allPersons.length;
+      let totalSeats = 0;
+      document.querySelectorAll('#canvas .table.card').forEach(table => {
+        totalSeats += parseInt(table.dataset.seatCount) || 0;
+      });
+      const countDiv = document.getElementById('guestSeatCounts');
+      countDiv.innerHTML = `Total Guests: ${totalGuests} &nbsp;&nbsp; Total Seats: <span class="${totalGuests > totalSeats ? 'seat-count over' : 'seat-count'}">${totalSeats}</span>`;
+    }
+    
+    /* ============================
+       Form to Add a New Guest
+    ============================ */
+    document.getElementById('addGuestForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const newName = document.getElementById('newGuestName').value.trim();
+      if (newName) {
+        addPerson(newName);
+        document.getElementById('newGuestName').value = '';
+      }
+    });
+    
+    /* ============================
+       Table Handling with Variable Seat Count
+    ============================ */
+    let tableCounter = 0;
+    function createTableContainer(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos) {
+      const tableContainer = document.createElement('div');
+      tableContainer.className = 'table card' + (tableType === "circle" ? " circle" : "");
+      tableContainer.id = tableId;
+      tableContainer.style.position = 'absolute';
+      if (leftPos !== undefined && topPos !== undefined) {
+        tableContainer.style.left = leftPos;
+        tableContainer.style.top = topPos;
+      } else {
+        tableContainer.style.left = (50 + (tableCounter * 20)) + 'px';
+        tableContainer.style.top = (50 + (tableCounter * 20)) + 'px';
+      }
+      tableContainer.style.width = (width + 20) + 'px';
+      tableContainer.dataset.tableType = tableType;
+      tableContainer.dataset.width = width;
+      tableContainer.dataset.height = height;
+      tableContainer.dataset.seatCount = seatCount;
+      
+      const header = document.createElement('div');
+      header.className = 'card-header table-header d-flex';
+      if (tableType === "circle") {
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'table-name';
+        nameDiv.textContent = tableName;
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'header-controls mt-1';
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn btn-sm btn-secondary';
+        renameBtn.textContent = 'Rename';
+        renameBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const newName = prompt('Enter new table name:', nameDiv.textContent);
+          if (newName) { nameDiv.textContent = newName; }
+        });
+        controlsDiv.appendChild(renameBtn);
+        const editSeatsBtn = document.createElement('button');
+        editSeatsBtn.className = 'btn btn-sm btn-info';
+        editSeatsBtn.textContent = 'Edit Seats';
+        editSeatsBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const currentCount = parseInt(tableContainer.dataset.seatCount);
+          const newCount = parseInt(prompt('Enter new number of seats (minimum 1):', currentCount));
+          if (isNaN(newCount) || newCount < 1) return;
+          updateTableSeats(tableContainer, newCount);
+        });
+        controlsDiv.appendChild(editSeatsBtn);
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn btn-sm btn-danger';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (confirm('Are you sure you want to remove this table?')) {
+            const seats = tableContainer.querySelectorAll('.seat');
+            seats.forEach(seat => {
+              if (seat.children.length > 0) {
+                document.getElementById('people-list').appendChild(seat.children[0]);
+              }
+            });
+            tableContainer.remove();
+            updateCounts();
+          }
+        });
+        controlsDiv.appendChild(removeBtn);
+        header.appendChild(nameDiv);
+        header.appendChild(controlsDiv);
+      } else {
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'table-title';
+        titleSpan.textContent = tableName;
+        header.appendChild(titleSpan);
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'header-controls ms-auto';
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'btn btn-sm btn-secondary';
+        renameBtn.textContent = 'Rename';
+        renameBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const newName = prompt('Enter new table name:', titleSpan.textContent);
+          if (newName) { titleSpan.textContent = newName; }
+        });
+        controlsDiv.appendChild(renameBtn);
+        const editSeatsBtn = document.createElement('button');
+        editSeatsBtn.className = 'btn btn-sm btn-info ms-1';
+        editSeatsBtn.textContent = 'Edit Seats';
+        editSeatsBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const currentCount = parseInt(tableContainer.dataset.seatCount);
+          const newCount = parseInt(prompt('Enter new number of seats (minimum 1):', currentCount));
+          if (isNaN(newCount) || newCount < 1) return;
+          updateTableSeats(tableContainer, newCount);
+        });
+        controlsDiv.appendChild(editSeatsBtn);
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn btn-sm btn-danger ms-1';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (confirm('Are you sure you want to remove this table?')) {
+            const seats = tableContainer.querySelectorAll('.seat');
+            seats.forEach(seat => {
+              if (seat.children.length > 0) {
+                document.getElementById('people-list').appendChild(seat.children[0]);
+              }
+            });
+            tableContainer.remove();
+            updateCounts();
+          }
+        });
+        controlsDiv.appendChild(removeBtn);
+        header.appendChild(controlsDiv);
+      }
+      
+      tableContainer.appendChild(header);
+      tableContainer.appendChild(tableBodyElem);
+      document.getElementById('canvas').appendChild(tableContainer);
+      makeTableDraggable(tableContainer);
+      tableCounter++;
+      updateCounts();
+    }
+    
+    function createCircleTable(tableId, tableName, seatCount, imported = false, leftPos, topPos) {
+      const width = 200, height = 200;
+      const tableBody = document.createElement('div');
+      tableBody.className = 'card-body table-body';
+      tableBody.style.position = 'relative';
+      tableBody.style.width = width + 'px';
+      tableBody.style.height = height + 'px';
+      tableBody.style.border = '2px solid #333';
+      tableBody.style.borderRadius = '50%';
+      tableBody.style.margin = '10px';
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = width / 2 - 20;
+      for (let i = 0; i < seatCount; i++) {
+        const angle = (2 * Math.PI / seatCount) * i;
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        seat.style.left = (centerX + radius * Math.cos(angle) - 15) + 'px';
+        seat.style.top = (centerY + radius * Math.sin(angle) - 15) + 'px';
+        seat.addEventListener('dragover', handleDragOver);
+        seat.addEventListener('dragleave', handleDragLeave);
+        seat.addEventListener('drop', handleDrop);
+        seat.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openAssignmentModal(seat);
+        });
+        tableBody.appendChild(seat);
+      }
+      createTableContainer(tableId, tableName, tableBody, width, height, "circle", seatCount, leftPos, topPos);
+    }
+    
+    function createRectangleTable(tableId, tableName, seatCount, imported = false, leftPos, topPos) {
+      const width = 300, height = 150;
+      const tableBody = document.createElement('div');
+      tableBody.className = 'card-body table-body';
+      tableBody.style.position = 'relative';
+      tableBody.style.width = width + 'px';
+      tableBody.style.height = height + 'px';
+      tableBody.style.border = '2px solid #333';
+      tableBody.style.borderRadius = '5px';
+      tableBody.style.margin = '10px';
+      const topRowCount = Math.floor(seatCount / 2);
+      const bottomRowCount = seatCount - topRowCount;
+      for (let i = 0; i < topRowCount; i++){
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        const leftPosSeat = ((i + 0.5) * (width / topRowCount)) - 15;
+        seat.style.left = leftPosSeat + 'px';
+        seat.style.top = '-20px';
+        seat.addEventListener('dragover', handleDragOver);
+        seat.addEventListener('dragleave', handleDragLeave);
+        seat.addEventListener('drop', handleDrop);
+        seat.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openAssignmentModal(seat);
+        });
+        tableBody.appendChild(seat);
+      }
+      for (let i = 0; i < bottomRowCount; i++){
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        const leftPosSeat = ((i + 0.5) * (width / bottomRowCount)) - 15;
+        seat.style.left = leftPosSeat + 'px';
+        seat.style.top = (height - 10) + 'px';
+        seat.addEventListener('dragover', handleDragOver);
+        seat.addEventListener('dragleave', handleDragLeave);
+        seat.addEventListener('drop', handleDrop);
+        seat.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openAssignmentModal(seat);
+        });
+        tableBody.appendChild(seat);
+      }
+      createTableContainer(tableId, tableName, tableBody, width, height, "rectangle", seatCount, leftPos, topPos);
+    }
+    
+    function makeTableDraggable(tableElem) {
+      const header = tableElem.querySelector('.table-header');
+      header.style.cursor = 'move';
+      header.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        let offsetX = e.clientX - tableElem.offsetLeft;
+        let offsetY = e.clientY - tableElem.offsetTop;
+        function mouseMoveHandler(e) {
+          tableElem.style.left = (e.clientX - offsetX) + 'px';
+          tableElem.style.top = (e.clientY - offsetY) + 'px';
+        }
+        function mouseUpHandler(e) {
+          document.removeEventListener('mousemove', mouseMoveHandler);
+          document.removeEventListener('mouseup', mouseUpHandler);
+        }
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+      });
+    }
+    
+    function updateTableSeats(tableContainer, newSeatCount) {
+      const tableType = tableContainer.dataset.tableType;
+      const width = parseInt(tableContainer.dataset.width);
+      const height = parseInt(tableContainer.dataset.height);
+      const oldAssigned = [];
+      const oldSeats = tableContainer.querySelectorAll('.card-body .seat');
+      oldSeats.forEach(seat => {
+        if (seat.children.length > 0) {
+          oldAssigned.push(seat.children[0]);
+        }
+      });
+      const oldBody = tableContainer.querySelector('.card-body');
+      oldBody.remove();
+      let newBody;
+      if (tableType === "circle") {
+        newBody = document.createElement('div');
+        newBody.className = 'card-body table-body';
+        newBody.style.position = 'relative';
+        newBody.style.width = width + 'px';
+        newBody.style.height = height + 'px';
+        newBody.style.border = '2px solid #333';
+        newBody.style.borderRadius = '50%';
+        newBody.style.margin = '10px';
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = width / 2 - 20;
+        for (let i = 0; i < newSeatCount; i++) {
+          const angle = (2 * Math.PI / newSeatCount) * i;
+          const seat = document.createElement('div');
+          seat.className = 'seat';
+          seat.style.left = (centerX + radius * Math.cos(angle) - 15) + 'px';
+          seat.style.top = (centerY + radius * Math.sin(angle) - 15) + 'px';
+          seat.addEventListener('dragover', handleDragOver);
+          seat.addEventListener('dragleave', handleDragLeave);
+          seat.addEventListener('drop', handleDrop);
+          seat.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openAssignmentModal(seat);
+          });
+          newBody.appendChild(seat);
+        }
+      } else if (tableType === "rectangle") {
+        newBody = document.createElement('div');
+        newBody.className = 'card-body table-body';
+        newBody.style.position = 'relative';
+        newBody.style.width = width + 'px';
+        newBody.style.height = height + 'px';
+        newBody.style.border = '2px solid #333';
+        newBody.style.borderRadius = '5px';
+        newBody.style.margin = '10px';
+        const topRowCount = Math.floor(newSeatCount / 2);
+        const bottomRowCount = newSeatCount - topRowCount;
+        for (let i = 0; i < topRowCount; i++){
+          const seat = document.createElement('div');
+          seat.className = 'seat';
+          const leftPosSeat = ((i + 0.5) * (width / topRowCount)) - 15;
+          seat.style.left = leftPosSeat + 'px';
+          seat.style.top = '-20px';
+          seat.addEventListener('dragover', handleDragOver);
+          seat.addEventListener('dragleave', handleDragLeave);
+          seat.addEventListener('drop', handleDrop);
+          seat.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openAssignmentModal(seat);
+          });
+          newBody.appendChild(seat);
+        }
+        for (let i = 0; i < bottomRowCount; i++){
+          const seat = document.createElement('div');
+          seat.className = 'seat';
+          const leftPosSeat = ((i + 0.5) * (width / bottomRowCount)) - 15;
+          seat.style.left = leftPosSeat + 'px';
+          seat.style.top = (height - 10) + 'px';
+          seat.addEventListener('dragover', handleDragOver);
+          seat.addEventListener('dragleave', handleDragLeave);
+          seat.addEventListener('drop', handleDrop);
+          seat.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openAssignmentModal(seat);
+          });
+          newBody.appendChild(seat);
+        }
+      }
+      const newSeats = newBody.children;
+      const assignCount = Math.min(oldAssigned.length, newSeatCount);
+      for (let i = 0; i < assignCount; i++) {
+         newSeats[i].innerHTML = '';
+         newSeats[i].appendChild(oldAssigned[i]);
+         newSeats[i].classList.add('filled');
+      }
+      for (let i = assignCount; i < oldAssigned.length; i++) {
+         document.getElementById('people-list').appendChild(oldAssigned[i]);
+      }
+      tableContainer.appendChild(newBody);
+      tableContainer.dataset.seatCount = newSeatCount;
+    }
+    
+    /* ============================
+       Assignment Modal Handling
+    ============================ */
+    let currentSeat = null;
+    function openAssignmentModal(seat) {
+      currentSeat = seat;
+      document.getElementById('clearSeatBtn').style.display = seat.children.length > 0 ? 'inline-block' : 'none';
+      document.getElementById('assignmentSearch').value = '';
+      refreshAssignmentModalList();
+      const modalEl = document.getElementById('assignmentModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+    function refreshAssignmentModalList() {
+      const searchQuery = document.getElementById('assignmentSearch').value.toLowerCase();
+      const assignmentList = document.getElementById('assignmentList');
+      assignmentList.innerHTML = '';
+      const availablePersons = Array.from(document.querySelectorAll("#people-list .person"));
+      availablePersons.forEach(person => {
+        if (person.textContent.toLowerCase().includes(searchQuery)) {
+          const li = document.createElement('li');
+          li.className = 'list-group-item list-group-item-action';
+          li.innerHTML = person.innerHTML;
+          li.addEventListener('click', function() {
+            assignPersonToSeat(person, currentSeat);
+          });
+          assignmentList.appendChild(li);
+        }
+      });
+    }
+    function assignPersonToSeat(person, seat) {
+      if (seat.children.length > 0) {
+        const existing = seat.children[0];
+        document.getElementById('people-list').appendChild(existing);
+      }
+      const source = person.parentElement;
+      if (source && source.classList.contains('seat')) {
+        source.classList.remove('filled');
+      }
+      seat.innerHTML = '';
+      seat.appendChild(person);
+      seat.classList.add('filled');
+      const modalEl = document.getElementById('assignmentModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+      updateCounts();
+    }
+    function clearSeatAssignment() {
+      if (currentSeat && currentSeat.children.length > 0) {
+        const person = currentSeat.children[0];
+        document.getElementById('people-list').appendChild(person);
+        currentSeat.innerHTML = '';
+        currentSeat.classList.remove('filled');
+      }
+      const modalEl = document.getElementById('assignmentModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+      updateCounts();
+    }
+    document.getElementById('assignmentSearch').addEventListener('input', refreshAssignmentModalList);
+    document.getElementById('clearSeatBtn').addEventListener('click', clearSeatAssignment);
+    
+    /* ============================
+       Random Assignment
+    ============================ */
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+         const j = Math.floor(Math.random() * (i + 1));
+         [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    function randomAssign() {
+      let unassignedPeople = Array.from(document.querySelectorAll("#people-list .person"));
+      unassignedPeople = shuffleArray(unassignedPeople);
+      let emptySeats = Array.from(document.querySelectorAll(".seat")).filter(seat => seat.children.length === 0);
+      emptySeats = shuffleArray(emptySeats);
+      const assignCount = Math.min(unassignedPeople.length, emptySeats.length);
+      for (let i = 0; i < assignCount; i++) {
+        const seat = emptySeats[i];
+        const person = unassignedPeople[i];
+        seat.appendChild(person);
+        seat.classList.add('filled');
+      }
+      updateCounts();
+    }
+    document.getElementById('randomAssignBtn').addEventListener('click', randomAssign);
+    
+    /* ============================
+       Export / Import State as JSON
+    ============================ */
+    function getState() {
+      const state = { tables: [], unassigned: [] };
+      const tableElements = document.querySelectorAll("#canvas .table.card");
+      tableElements.forEach(table => {
+         const tableName = table.querySelector(".table-title")?.textContent || table.querySelector(".table-name").textContent;
+         const tableType = table.dataset.tableType || "";
+         const left = table.style.left;
+         const top = table.style.top;
+         const width = table.dataset.width;
+         const height = table.dataset.height;
+         const seatCount = table.dataset.seatCount;
+         const seats = [];
+         const seatElements = table.querySelectorAll(".card-body .seat");
+         seatElements.forEach((seat, index) => {
+            let guest = "";
+            if (seat.children.length > 0) {
+                guest = seat.children[0].textContent.replace("👤", "").trim();
+            }
+            seats.push({ seatIndex: index + 1, guest: guest });
+         });
+         state.tables.push({ tableName, tableType, left, top, width, height, seatCount, seats });
+      });
+      const unassignedElements = document.querySelectorAll("#people-list .person");
+unassignedElements.forEach(person => {
+   const guest = person.querySelector('.guest-name').textContent.trim();
+   state.unassigned.push(guest);
+});
+
+      return state;
+    }
+    function exportState() {
+      const state = getState();
+      const jsonString = JSON.stringify(state, null, 2);
+      const blob = new Blob([jsonString], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "table_state.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    document.getElementById('exportStateBtn').addEventListener('click', exportState);
+    function importState(jsonText) {
+      const state = JSON.parse(jsonText);
+      document.getElementById('canvas').innerHTML = "";
+      document.getElementById('people-list').innerHTML = "";
+      state.tables.forEach(table => {
+         const tableId = 'table-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
+         const seatCount = parseInt(table.seatCount);
+         if (table.tableType === "circle") {
+            createCircleTable(tableId, table.tableName, seatCount, true, table.left, table.top);
+         } else {
+            createRectangleTable(tableId, table.tableName, seatCount, true, table.left, table.top);
+         }
+         const tableContainer = document.getElementById('canvas').lastElementChild;
+         const seats = tableContainer.querySelectorAll(".card-body .seat");
+         table.seats.forEach(seatData => {
+            const idx = seatData.seatIndex - 1;
+            if (idx >= 0 && idx < seats.length && seatData.guest) {
+               seats[idx].innerHTML = '';
+               seats[idx].appendChild(createPersonElement(seatData.guest));
+               seats[idx].classList.add('filled');
+            }
+         });
+      });
+      state.unassigned.forEach(guest => {
+         addPerson(guest);
+      });
+      updateCounts();
+    }
+    document.getElementById('importStateBtn').addEventListener('click', function() {
+      document.getElementById('importStateFile').click();
+    });
+    document.getElementById('importStateFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+         importState(e.target.result);
+      }
+      reader.readAsText(file);
+    });
+    
+    /* ============================
+       Human-Readable Print Option
+    ============================ */
+    function printPlan() {
+      const state = getState();
+      let html = '<html><head><title>Wedding Seating Plan</title>';
+      html += '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">';
+      html += '<style>body{padding:20px; font-family: Roboto, sans-serif;} h1, h2 {margin-top:20px;} ul {list-style: none; padding: 0;} li {margin-bottom: 5px;}</style></head><body>';
+      html += '<h1>Wedding Seating Plan</h1>';
+      state.tables.forEach(table => {
+  html += `<h2>${table.tableName}</h2>`;
+  html += `<p>Seats: ${table.seatCount}</p>`;
+  html += '<ul>';
+  table.seats.forEach(seat => {
+    // Replace all occurrences of ✎ and ✖ with an empty string and trim any extra whitespace
+    const guestName = seat.guest ? seat.guest.replace(/[✎✖]/g, '').trim() : 'Empty';
+    html += `<li>Seat ${seat.seatIndex}: ${guestName}</li>`;
+  });
+  html += '</ul>';
+});
+
+      if (state.unassigned.length > 0) {
+         html += '<h2>Unassigned Guests</h2>';
+         html += '<ul>';
+         state.unassigned.forEach(guest => {
+            html += `<li>${guest}</li>`;
+         });
+         html += '</ul>';
+      }
+      html += '</body></html>';
+      const printWindow = window.open('', '', 'width=800,height=600');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+    document.getElementById('printPlanBtn').addEventListener('click', printPlan);
+    
+    /* ============================
+       New Table Modal Form Handling
+    ============================ */
+    document.getElementById('newTableForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const tableName = document.getElementById('tableName').value.trim();
+      const tableType = document.getElementById('tableType').value;
+      const seatCount = parseInt(document.getElementById('seatCount').value);
+      if (!tableName || isNaN(seatCount) || seatCount < 1) return;
+      const tableId = 'table-' + Date.now();
+      if (tableType === 'circle') {
+        createCircleTable(tableId, tableName, seatCount);
+      } else {
+        createRectangleTable(tableId, tableName, seatCount);
+      }
+      const modalEl = document.getElementById('newTableModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+      this.reset();
+    });
+    
+    /* ============================
+       No default tables on load.
+    ============================ */
+    
+  </script>
+</body>
+</html>
