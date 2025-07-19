@@ -1,0 +1,613 @@
+/* Overall look and feel */
+body {
+  background-color: #f5f7fa;
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 10px;
+}
+.container-fluid {
+  max-width: none;
+  margin: 0;
+  padding: 0 10px;
+}
+h1, h2, h5 {
+  color: #333;
+}
+
+/* Top Controls */
+#controls {
+  margin-bottom: 15px;
+}
+
+/* Panels styling */
+#people-container, #assigned-container, #table-plan {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* The table plan area now contains a zoomable/pannable canvas */
+#table-plan {
+  overflow: hidden;
+  height: calc(100vh - 200px);
+  position: relative;
+  flex: 1;
+}
+
+/* Increase the canvas size to allow for many tables */
+#canvas {
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4000px;
+  height: 4000px;
+}
+
+/* Unassigned people list */
+#people-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+#people-list .person {
+  margin-bottom: 10px;
+}
+
+/* Guest controls container */
+.guest-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.guest-controls button {
+  background: transparent;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: transform 0.2s;
+}
+.guest-controls button:hover {
+  transform: scale(1.2);
+}
+
+/* Person element styling with card effect on hover */
+.person {
+  padding: 10px 14px;
+  background: #e7f3ff;
+  border: 2px solid #99caff;
+  border-radius: 6px;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.person:hover {
+  background: #d0e7ff;
+  z-index: 1000;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  border-color: #007bff;
+}
+
+.person:active {
+  cursor: grabbing;
+  transform: scale(1.02);
+}
+
+.person.dragging {
+  opacity: 0.8;
+  transform: rotate(3deg) scale(1.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+}
+
+.person-icon {
+  margin-right: 8px;
+}
+
+/* Seat styling */
+.seat {
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border: 2px dashed #ccc;
+  border-radius: 50%;
+  position: absolute;
+  text-align: center;
+  line-height: 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+/* Guest styling in seats */
+.seat .person {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  box-shadow: none;
+  position: relative;
+}
+
+.seat .person:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.seat .person .guest-name {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+}
+
+.seat .person .guest-controls {
+  display: none;
+}
+
+.seat .person .person-icon {
+  font-size: 1.2em;
+  margin: 0;
+}
+
+/* Tooltip for seats */
+.seat[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.seat[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  bottom: 120%;
+}
+
+.seat:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.seat.over {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.seat.drop-zone {
+  background: #e7f3ff;
+  border: 3px dashed #007bff;
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
+/* Empty seat styling - higher specificity */
+.seat:not(.filled):not(.over):not(.drop-zone) {
+  background: #f8f9fa !important;
+  border: 3px dashed #6c757d !important;
+  position: absolute !important;
+}
+
+.seat:not(.filled):not(.over):not(.drop-zone)::before {
+  content: "+";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5em;
+  color: #6c757d;
+  font-weight: bold;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.seat:not(.filled):not(.over):hover {
+  background: #e7f3ff !important;
+  border-color: #007bff !important;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+.seat:not(.filled):not(.over):hover::before {
+  color: #007bff;
+}
+
+/* Ensure filled seats override empty styling */
+.seat.filled {
+  background: #d4edda !important;
+  border: 2px solid #28a745 !important;
+  color: #155724;
+}
+
+.seat.filled::before {
+  display: none !important;
+}
+
+.seat.filled:hover {
+  background: #c3e6cb !important;
+  border-color: #1e7e34 !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); background: #d4edda; }
+  100% { transform: scale(1); }
+}
+
+/* Table card styling */
+.table.card {
+  position: absolute;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: #fff;
+}
+
+.table.card .card-header {
+  background: #007bff;
+  color: #fff;
+  border-bottom: none;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  padding: 10px 15px;
+}
+
+/* For circle tables, display the table name on its own line above the controls */
+.table.card.circle .card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.table.card.circle .table-name {
+  font-size: 1.1em;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.table.card .header-controls {
+  display: flex;
+  gap: 4px;
+}
+
+/* Print-friendly styling */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none;
+  }
+  .guest-controls,
+  .person button {
+    display: none !important;
+  }
+}
+
+/* Guest/Seat count display in the unassigned panel */
+#guestSeatCounts {
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+#guestSeatCounts .seat-count.over {
+  color: red;
+}
+
+/* Assigned guests section styling */
+#assigned-container {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+}
+
+#assigned-guests-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-right: 5px;
+}
+
+/* Custom scrollbar styling */
+#people-list::-webkit-scrollbar,
+#assigned-guests-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#people-list::-webkit-scrollbar-track,
+#assigned-guests-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+#people-list::-webkit-scrollbar-thumb,
+#assigned-guests-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+#people-list::-webkit-scrollbar-thumb:hover,
+#assigned-guests-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.table-assignment-header {
+  background: #f8f9fa;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s;
+}
+
+.table-assignment-header:hover {
+  background: #e9ecef;
+}
+
+.table-assignment {
+  margin-bottom: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.table-assignment:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.table-assignment.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  cursor: grabbing;
+}
+
+.table-assignment.drag-over {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #6c757d;
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.guest-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drag-handle-guest {
+  cursor: grab;
+  color: #6c757d;
+  font-size: 0.8em;
+  user-select: none;
+}
+
+.drag-handle-guest:active {
+  cursor: grabbing;
+}
+
+.guest-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.guest-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  cursor: grabbing;
+  z-index: 1000;
+}
+
+/* Visual feedback for dragging assigned guests */
+.guest-item:hover {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.guest-item.dragging {
+  background: #e7f3ff;
+  border: 2px dashed #007bff;
+}
+
+.guest-item.drag-over {
+  border-top: 2px solid #007bff;
+  background: #f8f9fa;
+}
+
+/* Prevent table drag effects when dragging guests */
+.table-assignment.dragging .guest-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.table-assignment:not(.dragging) .guest-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.table-assignment-header .table-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.table-assignment-header .guest-count {
+  background: #007bff;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.8em;
+  min-width: 20px;
+  text-align: center;
+}
+
+.table-assignment-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.table-assignment-content.expanded {
+  max-height: 500px;
+}
+
+.table-assignment-content .guest-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-assignment-content .guest-item:last-child {
+  border-bottom: none;
+}
+
+.table-assignment-content .guest-name {
+  color: #333;
+}
+
+.table-assignment-content .guest-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.table-assignment-content .edit-guest-btn,
+.table-assignment-content .remove-guest-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.table-assignment-content .edit-guest-btn {
+  color: #007bff;
+}
+
+.table-assignment-content .edit-guest-btn:hover {
+  background: #e7f3ff;
+}
+
+.table-assignment-content .remove-guest-btn {
+  color: #dc3545;
+}
+
+.table-assignment-content .remove-guest-btn:hover {
+  background: #f8d7da;
+}
+
+.empty-seat-item {
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.empty-seat-item:hover {
+  opacity: 0.8;
+  background: #f8f9fa;
+}
+
+.empty-seat-item.over {
+  opacity: 1;
+  background: #fffae6;
+  border: 2px dashed #ffc107;
+  border-radius: 4px;
+  transform: scale(1.02);
+}
+
+.empty-seat {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.drop-hint {
+  color: #28a745;
+  font-size: 0.7em;
+  opacity: 0.6;
+  margin-left: auto;
+  pointer-events: none;
+}
+
+.empty-seat-item:hover .drop-hint {
+  opacity: 0.8;
+}
+
+.empty-table {
+  padding: 10px 12px;
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+} 
