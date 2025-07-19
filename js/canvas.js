@@ -12,13 +12,7 @@ let canvasScale = 1.0,
     startOffsetX = 0,
     startOffsetY = 0,
     lastWheelTime = 0,
-    wheelTimeout = null,
-    isZooming = false,
-    zoomAnimationId = null,
-    lastPanTime = 0,
-    panVelocityX = 0,
-    panVelocityY = 0,
-    momentumAnimationId = null;
+    wheelTimeout = null;
 
 const tablePlanEl = document.getElementById('table-plan');
 const canvasEl = document.getElementById('canvas');
