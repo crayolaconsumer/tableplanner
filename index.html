@@ -924,6 +924,19 @@
           const currentCount = parseInt(tableContainer.dataset.seatCount);
           const newCount = parseInt(prompt('Enter new number of seats (minimum 1):', currentCount));
           if (isNaN(newCount) || newCount < 1) return;
+          
+          // Check if reducing seats will unassign guests
+          const currentSeats = tableContainer.querySelectorAll('.card-body .seat');
+          const assignedGuests = Array.from(currentSeats).filter(seat => seat.children.length > 0);
+          
+          if (newCount < assignedGuests.length) {
+            const unassignedCount = assignedGuests.length - newCount;
+            const tableName = tableContainer.querySelector('.table-name')?.textContent || 'this table';
+            if (!confirm(`Warning: Reducing seats from ${currentCount} to ${newCount} will unassign ${unassignedCount} guest(s) from ${tableName}. Continue?`)) {
+              return;
+            }
+          }
+          
           updateTableSeats(tableContainer, newCount);
         });
         controlsDiv.appendChild(editSeatsBtn);
@@ -971,6 +984,19 @@
           const currentCount = parseInt(tableContainer.dataset.seatCount);
           const newCount = parseInt(prompt('Enter new number of seats (minimum 1):', currentCount));
           if (isNaN(newCount) || newCount < 1) return;
+          
+          // Check if reducing seats will unassign guests
+          const currentSeats = tableContainer.querySelectorAll('.card-body .seat');
+          const assignedGuests = Array.from(currentSeats).filter(seat => seat.children.length > 0);
+          
+          if (newCount < assignedGuests.length) {
+            const unassignedCount = assignedGuests.length - newCount;
+            const tableName = tableContainer.querySelector('.table-title')?.textContent || 'this table';
+            if (!confirm(`Warning: Reducing seats from ${currentCount} to ${newCount} will unassign ${unassignedCount} guest(s) from ${tableName}. Continue?`)) {
+              return;
+            }
+          }
+          
           updateTableSeats(tableContainer, newCount);
         });
         controlsDiv.appendChild(editSeatsBtn);
@@ -1214,16 +1240,37 @@
       }
       const newSeats = newBody.children;
       const assignCount = Math.min(oldAssigned.length, newSeatCount);
+      
+      // Reassign guests to new seats and update tooltips
       for (let i = 0; i < assignCount; i++) {
          newSeats[i].innerHTML = '';
          newSeats[i].appendChild(oldAssigned[i]);
          newSeats[i].classList.add('filled');
+         
+         // Clean guest name and update tooltip
+         if (window.cleanGuestName) {
+           window.cleanGuestName(oldAssigned[i]);
+         }
+         let guestName = oldAssigned[i].querySelector('.guest-name')?.textContent || 'Unknown Guest';
+         guestName = guestName.replace(/[✎✖]/g, '').trim();
+         newSeats[i].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
+         newSeats[i].title = `${guestName} (Click to edit, drag to move)`;
       }
+      
+      // Move excess guests to unassigned list
       for (let i = assignCount; i < oldAssigned.length; i++) {
+         // Clean guest name before moving to unassigned
+         if (window.cleanGuestName) {
+           window.cleanGuestName(oldAssigned[i]);
+         }
          document.getElementById('people-list').appendChild(oldAssigned[i]);
       }
+      
       tableContainer.appendChild(newBody);
       tableContainer.dataset.seatCount = newSeatCount;
+      
+      // Update counts and assigned guests display
+      updateCounts();
     }
     
     /* ============================
