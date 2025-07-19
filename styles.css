@@ -86,6 +86,23 @@ h1, h2, h5 {
   height: 100%;
   position: relative;
   flex: 1;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+#table-plan:active {
+  cursor: grabbing;
+}
+
+/* Prevent text selection during panning */
+#table-plan * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* Increase the canvas size to allow for many tables */
