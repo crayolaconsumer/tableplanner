@@ -32,32 +32,32 @@
       </div>
       <p class="text-muted mt-2">Use your mouse wheel to zoom. Click and drag on any blank area (i.e. not on a table) to pan the canvas.</p>
     </div>
-          <div class="row">
+    <div class="row">
         <!-- Left: Unassigned People Panel -->
         <div class="col-md-3">
-          <div id="people-container">
+        <div id="people-container">
             <h5>Unassigned Guests</h5>
-            <!-- Guest/Seat counts -->
-            <div id="guestSeatCounts"></div>
-            <!-- Form to add a new guest -->
-            <form id="addGuestForm" class="mb-3">
-              <div class="input-group input-group-sm">
-                <input type="text" id="newGuestName" class="form-control" placeholder="Add guest" required>
-                <button class="btn btn-outline-primary" type="submit">Add</button>
-              </div>
-            </form>
-            <input type="text" id="people-search-input" class="form-control mb-3" placeholder="Search guests">
-            <div id="people-list"></div>
-          </div>
+          <!-- Guest/Seat counts -->
+          <div id="guestSeatCounts"></div>
+          <!-- Form to add a new guest -->
+          <form id="addGuestForm" class="mb-3">
+            <div class="input-group input-group-sm">
+              <input type="text" id="newGuestName" class="form-control" placeholder="Add guest" required>
+              <button class="btn btn-outline-primary" type="submit">Add</button>
+            </div>
+          </form>
+          <input type="text" id="people-search-input" class="form-control mb-3" placeholder="Search guests">
+          <div id="people-list"></div>
         </div>
+      </div>
         
         <!-- Center: Table Plan Area -->
         <div class="col-md-6">
-          <div id="table-plan" class="position-relative">
-            <!-- The zoomable and pannable canvas -->
-            <div id="canvas"></div>
-          </div>
+        <div id="table-plan" class="position-relative">
+          <!-- The zoomable and pannable canvas -->
+          <div id="canvas"></div>
         </div>
+      </div>
         
         <!-- Right: Assigned Guests Section -->
         <div class="col-md-3">
@@ -66,7 +66,7 @@
             <div id="assigned-guests-list"></div>
           </div>
         </div>
-      </div>
+    </div>
   </div>
 
   <!-- Modal for Creating a New Table -->
@@ -155,9 +155,12 @@
       editBtn.innerHTML = "✎";
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const newName = prompt("Edit guest name:", nameSpan.textContent);
+        const currentName = nameSpan.textContent.replace(/[✎✖]/g, '').trim();
+        const newName = prompt("Edit guest name:", currentName);
         if (newName && newName.trim() !== '') {
           nameSpan.textContent = newName.trim();
+          // Update tooltips for this person
+          updateTooltipsForPerson(person);
           updateCounts();
         }
       });
@@ -202,9 +205,12 @@
       editBtn.innerHTML = "✎";
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const newName = prompt("Edit guest name:", nameSpan.textContent);
+        const currentName = nameSpan.textContent.replace(/[✎✖]/g, '').trim();
+        const newName = prompt("Edit guest name:", currentName);
         if (newName && newName.trim() !== '') {
           nameSpan.textContent = newName.trim();
+          // Update tooltips for this person
+          updateTooltipsForPerson(person);
           updateCounts();
         }
       });
@@ -264,7 +270,36 @@
     /* ============================
        Tooltip Management
     ============================ */
+    function cleanGuestName(person) {
+      // Clean the guest name by removing edit button characters and ensuring proper structure
+      const nameSpan = person.querySelector('.guest-name');
+      if (nameSpan) {
+        const currentText = nameSpan.textContent;
+        const cleanName = currentText.replace(/[✎✖]/g, '').trim();
+        if (currentText !== cleanName) {
+          nameSpan.textContent = cleanName;
+        }
+      }
+    }
+    
+    // Make cleanGuestName available globally
+    window.cleanGuestName = cleanGuestName;
+    
+    // Function to clean all guest names in the unassigned list
+    function cleanAllGuestNames() {
+      const unassignedPersons = document.querySelectorAll('#people-list .person');
+      unassignedPersons.forEach(person => {
+        cleanGuestName(person);
+      });
+    }
+    
+    // Make cleanAllGuestNames available globally
+    window.cleanAllGuestNames = cleanAllGuestNames;
+    
     function updateTooltipsForPerson(person) {
+      // Clean the guest name first
+      cleanGuestName(person);
+      
       // Find all seats that contain this person and update their tooltips
       const seats = document.querySelectorAll('#canvas .table.card .card-body .seat');
       seats.forEach(seat => {
@@ -281,6 +316,11 @@
        Guest/Seat Count Display
     ============================ */
     function updateCounts() {
+      // Clean all guest names first to ensure consistency
+      if (window.cleanAllGuestNames) {
+        window.cleanAllGuestNames();
+      }
+      
       const allPersons = document.querySelectorAll('.person');
       const totalGuests = allPersons.length;
       let totalSeats = 0;
@@ -1230,6 +1270,9 @@
       });
     }
     function assignPersonToSeat(person, seat) {
+      // Clean the guest name first
+      cleanGuestName(person);
+      
       if (seat.children.length > 0) {
         const existing = seat.children[0];
         document.getElementById('people-list').appendChild(existing);
@@ -1423,7 +1466,7 @@ unassignedElements.forEach(person => {
         if (guestItems.length > 0) {
           html += `<h2>${tableName}</h2>`;
           html += `<p>Seats: ${guestItems.length}</p>`;
-          html += '<ul>';
+  html += '<ul>';
           
           guestItems.forEach(guestItem => {
             const guestNameElement = guestItem.querySelector('.guest-name');
@@ -1436,7 +1479,7 @@ unassignedElements.forEach(person => {
             }
           });
           
-          html += '</ul>';
+  html += '</ul>';
         }
       });
       

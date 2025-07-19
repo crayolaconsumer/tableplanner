@@ -76,17 +76,41 @@ function handleDrop(e) {
       const existingGuest = this.children[0].querySelector('.guest-name')?.textContent || 'Unknown Guest';
       const newGuest = personElem.querySelector('.guest-name')?.textContent || 'Unknown Guest';
       
+      // Clean guest names for comparison
+      const cleanExistingGuest = existingGuest.replace(/[✎✖]/g, '').trim();
+      const cleanNewGuest = newGuest.replace(/[✎✖]/g, '').trim();
+      
       // Ask for confirmation before replacing
-      if (!confirm(`Replace ${existingGuest} with ${newGuest} in this seat?`)) {
+      if (!confirm(`Replace ${cleanExistingGuest} with ${cleanNewGuest} in this seat?`)) {
         return;
       }
       
-      // Move existing guest back to unassigned list
+      // Store the existing guest for potential swapping
       const existing = this.children[0];
-      document.getElementById('people-list').appendChild(existing);
-      this.classList.remove('filled');
-      this.removeAttribute('data-tooltip');
-      this.removeAttribute('title');
+      const existingSource = personElem.parentElement;
+      
+      // Check if we're doing a swap (both guests are from seats)
+      if (existingSource && existingSource.classList.contains('seat')) {
+        // This is a swap - move existing guest to the source seat
+        existingSource.innerHTML = '';
+        existingSource.appendChild(existing);
+        existingSource.classList.add('filled');
+        
+        // Clean and update tooltip for the source seat
+        if (window.cleanGuestName) {
+          window.cleanGuestName(existing);
+        }
+        let existingGuestName = existing.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+        existingGuestName = existingGuestName.replace(/[✎✖]/g, '').trim();
+        existingSource.setAttribute('data-tooltip', `${existingGuestName} (Click to edit, drag to move)`);
+        existingSource.title = `${existingGuestName} (Click to edit, drag to move)`;
+      } else {
+        // This is a replacement - move existing guest to unassigned list
+        if (window.cleanGuestName) {
+          window.cleanGuestName(existing);
+        }
+        document.getElementById('people-list').appendChild(existing);
+      }
     }
     
     // Remove from source if it was in a seat
@@ -96,6 +120,11 @@ function handleDrop(e) {
       // Clear tooltip and title from the source seat
       source.removeAttribute('data-tooltip');
       source.removeAttribute('title');
+    }
+    
+    // Clean the guest name to remove any embedded edit buttons
+    if (window.cleanGuestName) {
+      window.cleanGuestName(personElem);
     }
     
     // Add to new seat
@@ -122,6 +151,11 @@ function handleDrop(e) {
     setTimeout(() => {
       this.style.animation = '';
     }, 600);
+    
+    // Clean all guest names to ensure consistency
+    if (window.cleanAllGuestNames) {
+      window.cleanAllGuestNames();
+    }
     
     updateCounts();
   }
@@ -154,7 +188,27 @@ peopleList.addEventListener('drop', function(e) {
   const personId = e.dataTransfer.getData('text/plain');
   const personElem = document.getElementById(personId);
   if (personElem && isDragging) { 
+    // Get the source seat before moving the person
+    const source = personElem.parentElement;
+    
+    // Clean the guest name when moving to unassigned list
+    if (window.cleanGuestName) {
+      window.cleanGuestName(personElem);
+    }
     this.appendChild(personElem); 
+    
+    // Clear the source seat if it was a seat
+    if (source && source.classList.contains('seat')) {
+      source.classList.remove('filled');
+      source.removeAttribute('data-tooltip');
+      source.removeAttribute('title');
+    }
+    
+    // Clean all guest names to ensure consistency
+    if (window.cleanAllGuestNames) {
+      window.cleanAllGuestNames();
+    }
+    
     updateCounts(); 
   } else {
     // Handle dropping assigned guests from the aside menu
@@ -174,6 +228,10 @@ peopleList.addEventListener('drop', function(e) {
               seat.classList.remove('filled');
               seat.removeAttribute('data-tooltip');
               seat.removeAttribute('title');
+              // Clean the guest name before adding to unassigned list
+              if (window.cleanGuestName) {
+                window.cleanGuestName(person);
+              }
               // Add to unassigned list
               this.appendChild(person);
               updateCounts();
