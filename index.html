@@ -262,6 +262,22 @@
     });
     
     /* ============================
+       Tooltip Management
+    ============================ */
+    function updateTooltipsForPerson(person) {
+      // Find all seats that contain this person and update their tooltips
+      const seats = document.querySelectorAll('#canvas .table.card .card-body .seat');
+      seats.forEach(seat => {
+        if (seat.children.length > 0 && seat.children[0] === person) {
+          let guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+          guestName = guestName.replace(/[✎✖]/g, '').trim();
+          seat.setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
+          seat.title = `${guestName} (Click to edit, drag to move)`;
+        }
+      });
+    }
+    
+    /* ============================
        Guest/Seat Count Display
     ============================ */
     function updateCounts() {
@@ -307,7 +323,9 @@
         
         seats.forEach((seat, index) => {
           if (seat.children.length > 0) {
-            const guestName = seat.children[0].querySelector('.guest-name')?.textContent || 'Unknown Guest';
+            let guestName = seat.children[0].querySelector('.guest-name')?.textContent || 'Unknown Guest';
+            // Clean the guest name by removing edit button characters
+            guestName = guestName.replace(/[✎✖]/g, '').trim();
             assignedGuests.push({
               name: guestName,
               seatIndex: index + 1,
@@ -411,6 +429,10 @@
                       const nameSpan = personElement.querySelector('.guest-name');
                       if (nameSpan) {
                         nameSpan.textContent = newName.trim();
+                        // Update tooltip for this seat
+                        const seat = seats[guest.seatIndex - 1];
+                        seat.setAttribute('data-tooltip', `${newName.trim()} (Click to edit, drag to move)`);
+                        seat.title = `${newName.trim()} (Click to edit, drag to move)`;
                       }
                     }
                   }
@@ -523,7 +545,8 @@
                       targetSeat.classList.add('filled');
                       
                       // Add tooltip to the seat element
-                      const guestName = personElem.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+                      let guestName = personElem.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+                      guestName = guestName.replace(/[✎✖]/g, '').trim();
                       targetSeat.setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
                       targetSeat.title = `${guestName} (Click to edit, drag to move)`;
                       
@@ -751,9 +774,13 @@
             
             for (let person of unassignedPersons) {
               const nameSpan = person.querySelector('.guest-name');
-              if (nameSpan && nameSpan.textContent === guestName) {
-                personElement = person;
-                break;
+              if (nameSpan) {
+                // Clean the name for comparison (remove edit buttons)
+                const cleanName = nameSpan.textContent.replace(/[✎✖]/g, '').trim();
+                if (cleanName === guestName) {
+                  personElement = person;
+                  break;
+                }
               }
             }
             
@@ -772,7 +799,8 @@
               personElement.addEventListener('dragend', handlePersonDragEnd);
               
               // Add tooltip to the seat element
-              const guestName = personElement.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+              let guestName = personElement.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+              guestName = guestName.replace(/[✎✖]/g, '').trim();
               seats[index].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
               seats[index].title = `${guestName} (Click to edit, drag to move)`;
             }
@@ -1180,8 +1208,21 @@
         if (person.textContent.toLowerCase().includes(searchQuery)) {
           const li = document.createElement('li');
           li.className = 'list-group-item list-group-item-action';
-          li.innerHTML = person.innerHTML;
-          li.addEventListener('click', function() {
+          
+          // Create a clean version without edit buttons for the modal
+          const nameSpan = person.querySelector('.guest-name');
+          const guestName = nameSpan ? nameSpan.textContent.replace(/[✎✖]/g, '').trim() : 'Unknown Guest';
+          
+          li.innerHTML = `
+            <span class="person-icon">👤</span>
+            <span class="guest-name">${guestName}</span>
+          `;
+          
+          li.addEventListener('click', function(e) {
+            // Don't trigger if clicking on edit buttons
+            if (e.target.classList.contains('edit-guest-btn') || e.target.classList.contains('remove-guest-btn')) {
+              return;
+            }
             assignPersonToSeat(person, currentSeat);
           });
           assignmentList.appendChild(li);
@@ -1207,7 +1248,8 @@
       person.addEventListener('dragend', handlePersonDragEnd);
       
       // Add tooltip to the seat element
-      const guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+      let guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+      guestName = guestName.replace(/[✎✖]/g, '').trim();
       seat.setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
       seat.title = `${guestName} (Click to edit, drag to move)`;
       
@@ -1258,7 +1300,8 @@
         seat.classList.add('filled');
         
         // Add tooltip to the seat element
-        const guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+        let guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+        guestName = guestName.replace(/[✎✖]/g, '').trim();
         seat.setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
         seat.title = `${guestName} (Click to edit, drag to move)`;
       }
@@ -1334,10 +1377,11 @@ unassignedElements.forEach(person => {
                seats[idx].appendChild(personElement);
                seats[idx].classList.add('filled');
                
-               // Add tooltip to the seat element
-               const guestName = personElement.querySelector('.guest-name')?.textContent || 'Unknown Guest';
-               seats[idx].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
-               seats[idx].title = `${guestName} (Click to edit, drag to move)`;
+                     // Add tooltip to the seat element
+      let guestName = personElement.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+      guestName = guestName.replace(/[✎✖]/g, '').trim();
+      seats[idx].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
+      seats[idx].title = `${guestName} (Click to edit, drag to move)`;
             }
          });
       });
@@ -1384,7 +1428,11 @@ unassignedElements.forEach(person => {
           guestItems.forEach(guestItem => {
             const guestNameElement = guestItem.querySelector('.guest-name');
             if (guestNameElement) {
-              html += `<li>${guestNameElement.textContent}</li>`;
+              // Extract only the guest name, excluding any edit buttons
+              let guestName = guestNameElement.textContent;
+              // Remove any edit button text (✎ or ✖) and clean up
+              guestName = guestName.replace(/[✎✖]/g, '').trim();
+              html += `<li>${guestName}</li>`;
             }
           });
           

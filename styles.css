@@ -330,6 +330,14 @@ h1, h2, h5 {
   .person button {
     display: none !important;
   }
+  
+  /* Hide edit buttons only in print view */
+  .table-assignment-content .edit-guest-btn,
+  .table-assignment-content .remove-guest-btn,
+  .table.card .header-controls,
+  .table.card .btn {
+    display: none !important;
+  }
 }
 
 /* Guest/Seat count display in the unassigned panel */

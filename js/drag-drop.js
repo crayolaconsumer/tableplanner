@@ -109,7 +109,8 @@ function handleDrop(e) {
     personElem.addEventListener('dragend', handlePersonDragEnd);
     
     // Add tooltip to the seat element
-    const guestName = personElem.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+    let guestName = personElem.querySelector('.guest-name')?.textContent || 'Unknown Guest';
+    guestName = guestName.replace(/[✎✖]/g, '').trim();
     this.setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
     this.title = `${guestName} (Click to edit, drag to move)`;
     
