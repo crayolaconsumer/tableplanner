@@ -32,11 +32,16 @@
       </div>
       <p class="text-muted mt-2">Use your mouse wheel to zoom. Click and drag on any blank area (i.e. not on a table) to pan the canvas.</p>
     </div>
-    <div class="row">
+    <div class="row" id="main-layout">
         <!-- Left: Unassigned People Panel -->
-        <div class="col-md-3">
+        <div class="sidebar" id="unassigned-sidebar" data-title="Unassigned Guests">
         <div id="people-container">
-            <h5>Unassigned Guests</h5>
+            <div class="sidebar-header">
+              <h5>Unassigned Guests</h5>
+              <button class="btn btn-sm btn-outline-secondary sidebar-toggle" id="unassigned-toggle" title="Collapse sidebar">
+                <span class="toggle-icon">◀</span>
+              </button>
+            </div>
           <!-- Guest/Seat counts -->
           <div id="guestSeatCounts"></div>
           <!-- Form to add a new guest -->
@@ -52,7 +57,7 @@
       </div>
         
         <!-- Center: Table Plan Area -->
-        <div class="col-md-6">
+        <div id="canvas-container">
         <div id="table-plan" class="position-relative">
           <!-- The zoomable and pannable canvas -->
           <div id="canvas"></div>
@@ -60,9 +65,14 @@
       </div>
         
         <!-- Right: Assigned Guests Section -->
-        <div class="col-md-3">
+        <div class="sidebar" id="assigned-sidebar" data-title="Assigned Guests">
           <div id="assigned-container">
-            <h5>Assigned Guests</h5>
+            <div class="sidebar-header">
+              <h5>Assigned Guests</h5>
+              <button class="btn btn-sm btn-outline-secondary sidebar-toggle" id="assigned-toggle" title="Collapse sidebar">
+                <span class="toggle-icon">▶</span>
+              </button>
+            </div>
             <div id="assigned-guests-list"></div>
           </div>
         </div>
@@ -448,6 +458,32 @@
             guestItem.addEventListener('dragenter', handleGuestDragEnter);
             guestItem.addEventListener('dragleave', handleGuestDragLeave);
             guestItem.addEventListener('drop', handleGuestDrop);
+            
+            // Add hover highlighting for assigned guests
+            guestItem.addEventListener('mouseenter', function(e) {
+              // Don't highlight if we're dragging
+              if (window.dragDropModule && window.dragDropModule.isDragging) return;
+              
+              // Find the corresponding seat on the canvas and highlight it
+              const tables = document.querySelectorAll('#canvas .table.card');
+              tables.forEach(table => {
+                const tableName = table.querySelector('.table-title')?.textContent || table.querySelector('.table-name')?.textContent;
+                if (tableName === tableData.name) {
+                  const seats = table.querySelectorAll('.card-body .seat');
+                  if (seats[guest.seatIndex - 1]) {
+                    seats[guest.seatIndex - 1].classList.add('highlighted-seat');
+                  }
+                }
+              });
+            });
+            
+            guestItem.addEventListener('mouseleave', function(e) {
+              // Remove highlighting from all seats
+              const allSeats = document.querySelectorAll('#canvas .table.card .card-body .seat');
+              allSeats.forEach(seat => {
+                seat.classList.remove('highlighted-seat');
+              });
+            });
             
             // Add click handler to edit guest name
             const editBtn = guestItem.querySelector('.edit-guest-btn');
@@ -1609,6 +1645,48 @@ unassignedElements.forEach(person => {
     /* ============================
        No default tables on load.
     ============================ */
+    
+    /* ============================
+       Collapsible Sidebars
+    ============================ */
+    function toggleSidebar(sidebarId, toggleId, isLeft = true) {
+      const sidebar = document.getElementById(sidebarId);
+      const toggle = document.getElementById(toggleId);
+      const toggleIcon = toggle.querySelector('.toggle-icon');
+      
+      if (sidebar.classList.contains('collapsed')) {
+        // Expand sidebar
+        sidebar.classList.remove('collapsed');
+        
+        if (isLeft) {
+          toggleIcon.textContent = '◀';
+          toggle.title = 'Collapse sidebar';
+        } else {
+          toggleIcon.textContent = '▶';
+          toggle.title = 'Collapse sidebar';
+        }
+      } else {
+        // Collapse sidebar
+        sidebar.classList.add('collapsed');
+        
+        if (isLeft) {
+          toggleIcon.textContent = '▶';
+          toggle.title = 'Expand sidebar';
+        } else {
+          toggleIcon.textContent = '◀';
+          toggle.title = 'Expand sidebar';
+        }
+      }
+    }
+    
+    // Add event listeners for sidebar toggles
+    document.getElementById('unassigned-toggle').addEventListener('click', function() {
+      toggleSidebar('unassigned-sidebar', 'unassigned-toggle', true);
+    });
+    
+    document.getElementById('assigned-toggle').addEventListener('click', function() {
+      toggleSidebar('assigned-sidebar', 'assigned-toggle', false);
+    });
     
     /* ============================
        Initialize the page

@@ -19,13 +19,63 @@ h1, h2, h5 {
   margin-bottom: 15px;
 }
 
-/* Panels styling */
-#people-container, #assigned-container, #table-plan {
+/* Main layout */
+#main-layout {
+  display: flex;
+  height: calc(100vh - 200px);
+  gap: 10px;
+  margin: 0;
+}
+
+/* Sidebar base styling */
+.sidebar {
+  width: 300px;
+  min-width: 300px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   padding: 15px;
-  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  transform-origin: left center;
+}
+
+/* Remove card styling from assigned guests sidebar */
+#assigned-sidebar {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* Ensure assigned container has proper styling */
+#assigned-sidebar #assigned-container {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  height: 100%;
+}
+
+/* Canvas container */
+#canvas-container {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Panels styling */
+#people-container, #assigned-container, #table-plan {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -33,7 +83,7 @@ h1, h2, h5 {
 /* The table plan area now contains a zoomable/pannable canvas */
 #table-plan {
   overflow: hidden;
-  height: calc(100vh - 200px);
+  height: 100%;
   position: relative;
   flex: 1;
 }
@@ -53,6 +103,13 @@ h1, h2, h5 {
   flex: 1;
   overflow-y: auto;
   margin-top: 10px;
+}
+
+/* Divider between add guest and search fields */
+#addGuestForm {
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
 }
 #people-list .person {
   margin-bottom: 10px;
@@ -270,6 +327,26 @@ h1, h2, h5 {
   box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
 }
 
+/* Highlighted seat styling for hover from assigned guests list */
+.seat.highlighted-seat {
+  background: #fff3cd !important;
+  border-color: #ffc107 !important;
+  border-width: 3px !important;
+  transform: scale(1.15) !important;
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4) !important;
+  z-index: 1000 !important;
+  animation: highlightPulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
+  }
+  100% {
+    box-shadow: 0 8px 20px rgba(255, 193, 7, 0.6);
+  }
+}
+
 @keyframes pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
@@ -479,6 +556,13 @@ h1, h2, h5 {
 .guest-item:hover {
   background: #f8f9fa;
   border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Add visual indication for assigned guests that can be hovered */
+.guest-item:has(.guest-name:not(.empty-seat)):hover {
+  background: #fff3cd;
+  border-left: 3px solid #ffc107;
 }
 
 .guest-item.dragging {
@@ -618,4 +702,166 @@ h1, h2, h5 {
   color: #6c757d;
   font-style: italic;
   text-align: center;
+}
+
+/* ============================
+   Collapsible Sidebars
+============================ */
+
+/* Sidebar header with toggle button */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 0 8px 0 2px;
+}
+
+.sidebar-header h5 {
+  margin: 0;
+  flex: 1;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.sidebar-toggle {
+  padding: 0;
+  font-size: 0.7em;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e9ecef;
+  background: #f8f9fa;
+  color: #6c757d;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-toggle:hover {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.sidebar-toggle:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.toggle-icon {
+  font-size: 0.75em;
+  font-weight: bold;
+  line-height: 1;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle:hover .toggle-icon {
+  transform: scale(1.1);
+}
+
+/* Collapsed sidebar styling */
+#unassigned-sidebar.collapsed,
+#assigned-sidebar.collapsed {
+  width: 50px !important;
+  min-width: 50px !important;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scaleX(0.95);
+  opacity: 0.9;
+}
+
+#unassigned-sidebar.collapsed #people-container,
+#assigned-sidebar.collapsed #assigned-container {
+  padding: 10px 8px;
+  text-align: center;
+}
+
+/* Ensure toggle button has proper spacing when collapsed */
+#unassigned-sidebar.collapsed .sidebar-header,
+#assigned-sidebar.collapsed .sidebar-header {
+  padding: 0 8px;
+  justify-content: center;
+}
+
+#unassigned-sidebar.collapsed .sidebar-header h5,
+#assigned-sidebar.collapsed .sidebar-header h5 {
+  display: none;
+}
+
+#unassigned-sidebar.collapsed #guestSeatCounts,
+#unassigned-sidebar.collapsed #addGuestForm,
+#unassigned-sidebar.collapsed #people-search-input,
+#unassigned-sidebar.collapsed #people-list,
+#assigned-sidebar.collapsed #assigned-guests-list {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+/* Animate content when sidebar expands */
+#unassigned-sidebar:not(.collapsed) #guestSeatCounts,
+#unassigned-sidebar:not(.collapsed) #addGuestForm,
+#unassigned-sidebar:not(.collapsed) #people-search-input,
+#unassigned-sidebar:not(.collapsed) #people-list,
+#assigned-sidebar:not(.collapsed) #assigned-guests-list {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+/* Show sidebar name on hover when collapsed */
+#unassigned-sidebar.collapsed:hover::after,
+#assigned-sidebar.collapsed:hover::after {
+  content: attr(data-title);
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-left: 10px;
+  pointer-events: none;
+}
+
+/* Canvas container transitions */
+#canvas-container {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .sidebar-toggle {
+    padding: 6px 10px;
+    font-size: 0.9em;
+  }
+  
+  #unassigned-sidebar.collapsed,
+  #assigned-sidebar.collapsed {
+    width: 60px !important;
+    min-width: 60px !important;
+  }
 } 
