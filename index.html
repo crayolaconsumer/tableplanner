@@ -3034,10 +3034,8 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Use emergency fix to clear Firebase and force correct data
-        emergencyFixFirebase();
-        
-        showCollaborationMessage('Emergency fix applied! Firebase cleared and correct data pushed.', 'success');
+        // Use nuclear reset for complete collaboration reset
+        nuclearReset();
       }
     });
     

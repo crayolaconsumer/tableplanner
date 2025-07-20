@@ -523,4 +523,133 @@ function emergencyFixFirebase() {
 }
 
 // Make emergency fix available globally
-window.emergencyFixFirebase = emergencyFixFirebase; 
+window.emergencyFixFirebase = emergencyFixFirebase;
+
+// Nuclear option: Complete collaboration reset
+function nuclearReset() {
+  if (!isCollaborating) return;
+  
+  console.log('NUCLEAR RESET: Complete collaboration reset...');
+  
+  // Stop collaboration first
+  isCollaborating = false;
+  if (presenceRef) {
+    presenceRef.remove();
+  }
+  
+  // Clear all Firebase data
+  database.ref().remove().then(() => {
+    console.log('All Firebase data cleared');
+    
+    // Wait 2 seconds for complete clear
+    setTimeout(() => {
+      // Restart collaboration
+      initCollaboration();
+      listenForUpdates();
+      
+      // Update UI
+      document.getElementById('collaborateIcon').textContent = '🟢';
+      document.getElementById('collaborateText').textContent = 'Collaborating';
+      document.getElementById('collaborateBtn').classList.remove('btn-primary');
+      document.getElementById('collaborateBtn').classList.add('btn-success');
+      document.getElementById('syncBtn').style.display = 'inline-block';
+      
+      // Force push correct data
+      setTimeout(() => {
+        const currentState = getState();
+        
+        // Ensure Head Table has correct guests
+        for (const tableId in currentState.tables) {
+          const table = currentState.tables[tableId];
+          if (table.name === 'Head Table - Long Way') {
+            const correctGuests = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'];
+            
+            // Clear and reassign
+            table.seats.forEach(seat => { seat.guest = null; });
+            correctGuests.forEach((guest, index) => {
+              if (table.seats[index]) {
+                table.seats[index].guest = guest;
+              }
+            });
+            
+            console.log('Head Table corrected with:', correctGuests);
+            break;
+          }
+        }
+        
+        // Push to Firebase with nuclear flag
+        database.ref('seatingPlan').set({
+          ...currentState,
+          lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: currentUserId,
+          nuclearReset: true,
+          resetTimestamp: Date.now()
+        }).then(() => {
+          console.log('NUCLEAR RESET COMPLETE: Clean state pushed to Firebase');
+          lastSavedState = JSON.stringify(currentState);
+          
+          // Update displays
+          updateCounts();
+          updateAssignedGuestsDisplay();
+          updateAllGuestDisplays();
+          
+          showCollaborationMessage('Nuclear reset complete! Clean state established.', 'success');
+        }).catch((error) => {
+          console.error('Error in nuclear reset:', error);
+        });
+      }, 1000);
+    }, 2000);
+  }).catch((error) => {
+    console.error('Error clearing Firebase:', error);
+  });
+}
+
+// Make nuclear reset available globally
+window.nuclearReset = nuclearReset;
+
+// Force client to reload from Firebase
+function forceClientReload() {
+  if (!isCollaborating) return;
+  
+  console.log('FORCE CLIENT RELOAD: Clearing local state and reloading from Firebase...');
+  
+  // Clear local state completely
+  tables = {};
+  guestData = new Map();
+  
+  // Clear all table containers from DOM
+  const tableContainers = document.querySelectorAll('.table-container');
+  tableContainers.forEach(container => container.remove());
+  
+  // Clear assigned guests display
+  const assignedGuestsContainer = document.getElementById('assignedGuestsContainer');
+  if (assignedGuestsContainer) {
+    assignedGuestsContainer.innerHTML = '';
+  }
+  
+  // Force reload from Firebase
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    if (data && data.tables && Object.keys(data.tables).length > 0) {
+      const { lastUpdated, updatedBy, nuclearReset, resetTimestamp, ...cleanData } = data;
+      
+      // Import the clean data
+      importState(JSON.stringify(cleanData));
+      console.log('Client state reloaded from Firebase');
+      
+      // Update displays
+      updateCounts();
+      updateAssignedGuestsDisplay();
+      updateAllGuestDisplays();
+      
+      showCollaborationMessage('Client state reloaded from Firebase!', 'success');
+    } else {
+      console.log('No data in Firebase to reload');
+    }
+  }).catch((error) => {
+    console.error('Error reloading from Firebase:', error);
+  });
+}
+
+// Make force reload available globally
+window.forceClientReload = forceClientReload; 
