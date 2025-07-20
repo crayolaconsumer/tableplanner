@@ -140,11 +140,15 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Add touch support for mobile devices
+// Enhanced touch support for mobile devices
 let touchStartDistance = 0;
 let touchStartScale = 1.0;
+let lastTapTime = 0;
+let touchStartTime = 0;
 
 tablePlanEl.addEventListener('touchstart', function(e) {
+  touchStartTime = Date.now();
+  
   if (e.touches.length === 2) {
     // Pinch to zoom
     touchStartDistance = Math.hypot(
@@ -166,7 +170,7 @@ tablePlanEl.addEventListener('touchmove', function(e) {
   e.preventDefault();
   
   if (e.touches.length === 2) {
-    // Handle pinch zoom
+    // Handle pinch zoom with momentum
     const distance = Math.hypot(
       e.touches[0].clientX - e.touches[1].clientX,
       e.touches[0].clientY - e.touches[1].clientY
@@ -180,9 +184,9 @@ tablePlanEl.addEventListener('touchmove', function(e) {
       updateCanvasTransform();
     }
   } else if (e.touches.length === 1 && isPanning) {
-    // Handle pan
-    const deltaX = (e.touches[0].clientX - panStartX) * 0.8;
-    const deltaY = (e.touches[0].clientY - panStartY) * 0.8;
+    // Handle pan with reduced sensitivity for mobile
+    const deltaX = (e.touches[0].clientX - panStartX) * 0.6;
+    const deltaY = (e.touches[0].clientY - panStartY) * 0.6;
     
     canvasOffsetX = startOffsetX + deltaX;
     canvasOffsetY = startOffsetY + deltaY;
@@ -191,8 +195,45 @@ tablePlanEl.addEventListener('touchmove', function(e) {
 }, { passive: false });
 
 tablePlanEl.addEventListener('touchend', function(e) {
+  const touchDuration = Date.now() - touchStartTime;
+  
+  // Double tap to reset zoom (only if it's a quick tap)
+  if (e.touches.length === 0 && touchDuration < 200) {
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+      // Double tap detected - reset zoom and pan
+      canvasScale = 1.0;
+      canvasOffsetX = 0;
+      canvasOffsetY = 0;
+      updateCanvasTransform();
+      lastTapTime = 0; // Prevent triple tap
+    } else {
+      lastTapTime = now;
+    }
+  }
+  
   isPanning = false;
 });
+
+// Prevent context menu on long press for mobile
+tablePlanEl.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+});
+
+// Mobile-specific canvas enhancements
+function enhanceMobileCanvas() {
+  if (window.innerWidth <= 767) {
+    // Add subtle visual feedback for mobile canvas
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+      canvas.style.transition = 'transform 0.1s ease-out';
+    }
+  }
+}
+
+// Initialize mobile canvas enhancements
+document.addEventListener('DOMContentLoaded', enhanceMobileCanvas);
+window.addEventListener('resize', enhanceMobileCanvas);
 
 // Export canvas functions
 window.canvasModule = {

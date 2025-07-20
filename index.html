@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Wedding Table Plan Creator</title>
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -26,11 +27,17 @@
           <button type="button" class="btn btn-success ms-2" id="exportStateBtn">Export Plan</button>
           <button type="button" class="btn btn-info ms-2" id="importStateBtn">Import Plan</button>
           <button type="button" class="btn btn-warning ms-2" id="printPlanBtn">Print Plan</button>
+          <button type="button" class="btn btn-outline-secondary ms-2" id="download-template-btn" title="Download CSV template">
+            📥 Template
+          </button>
           <!-- Hidden file input for JSON state import -->
           <input type="file" id="importStateFile" accept=".json" style="display:none;">
         </div>
       </div>
-      <p class="text-muted mt-2">Use your mouse wheel to zoom. Click and drag on any blank area (i.e. not on a table) to pan the canvas.</p>
+      <p class="text-muted mt-2 desktop-instructions">Use your mouse wheel to zoom. Click and drag on any blank area (i.e. not on a table) to pan the canvas.</p>
+      <div class="mobile-instructions" style="display: none;">
+        <strong>📱 Mobile Controls:</strong> Pinch to zoom • Drag to pan • Double-tap to reset • Swipe from edges or tap buttons to open menus
+    </div>
     </div>
     <div class="row" id="main-layout">
         <!-- Left: Unassigned People Panel -->
@@ -44,13 +51,12 @@
             </div>
           <!-- Guest/Seat counts -->
           <div id="guestSeatCounts"></div>
-          <!-- Form to add a new guest -->
-          <form id="addGuestForm" class="mb-3">
-            <div class="input-group input-group-sm">
-              <input type="text" id="newGuestName" class="form-control" placeholder="Add guest" required>
-              <button class="btn btn-outline-primary" type="submit">Add</button>
+          <!-- Button to add a new guest -->
+          <div class="mb-3">
+            <button type="button" class="btn btn-outline-primary w-100" id="addGuestBtn">
+              <i class="me-2">➕</i>Add New Guest
+            </button>
             </div>
-          </form>
           <input type="text" id="people-search-input" class="form-control mb-3" placeholder="Search guests">
           <div id="people-list"></div>
         </div>
@@ -128,6 +134,69 @@
     </div>
   </div>
 
+  <!-- Modal for Creating/Editing Guest Profile -->
+  <div class="modal fade" id="guestProfileModal" tabindex="-1" aria-labelledby="guestProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+         <div class="modal-header">
+           <h5 class="modal-title" id="guestProfileModalLabel">Guest Profile</h5>
+           <button type="button" class="btn btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+           <form id="guestProfileForm">
+             <div class="row">
+               <div class="col-md-6">
+                 <div class="mb-3">
+                   <label for="guestName" class="form-label">Name *</label>
+                   <input type="text" class="form-control" id="guestName" required>
+                 </div>
+                 <div class="mb-3">
+                   <label for="guestEmail" class="form-label">Email</label>
+                   <input type="email" class="form-control" id="guestEmail">
+                 </div>
+                 <div class="mb-3">
+                   <label for="guestPhone" class="form-label">Phone</label>
+                   <input type="tel" class="form-control" id="guestPhone">
+                 </div>
+               </div>
+               <div class="col-md-6">
+                 <div class="mb-3">
+                   <label for="guestDietary" class="form-label">Dietary Requirements</label>
+                   <select class="form-select" id="guestDietary">
+                     <option value="">None</option>
+                     <option value="Vegetarian">Vegetarian</option>
+                     <option value="Vegan">Vegan</option>
+                     <option value="Gluten Free">Gluten Free</option>
+                     <option value="Dairy Free">Dairy Free</option>
+                     <option value="Nut Free">Nut Free</option>
+                     <option value="Halal">Halal</option>
+                     <option value="Kosher">Kosher</option>
+                     <option value="Other">Other</option>
+                   </select>
+                 </div>
+                 <div class="mb-3">
+                   <label for="guestPlusOne" class="form-label">Plus One</label>
+                   <select class="form-select" id="guestPlusOne">
+                     <option value="No">No</option>
+                     <option value="Yes">Yes</option>
+                   </select>
+                 </div>
+                 <div class="mb-3">
+                   <label for="guestNotes" class="form-label">Notes</label>
+                   <textarea class="form-control" id="guestNotes" rows="3" placeholder="Any additional notes about this guest..."></textarea>
+                 </div>
+               </div>
+             </div>
+           </form>
+         </div>
+         <div class="modal-footer">
+           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+           <button type="button" class="btn btn-primary" id="saveGuestProfileBtn">Save Guest</button>
+         </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap Bundle JS (includes Popper) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <!-- External CSS -->
@@ -135,6 +204,276 @@
   <!-- External JavaScript Modules -->
   <script src="js/canvas.js"></script>
   <script src="js/drag-drop.js"></script>
+  <script>
+        // Mobile-specific enhancements
+    function initMobileFeatures() {
+      const isMobile = window.innerWidth <= 767;
+      
+      // Show/hide appropriate instructions
+      const desktopInstructions = document.querySelector('.desktop-instructions');
+      const mobileInstructions = document.querySelector('.mobile-instructions');
+      
+      if (isMobile) {
+        if (desktopInstructions) desktopInstructions.style.display = 'none';
+        if (mobileInstructions) mobileInstructions.style.display = 'block';
+        
+        // Initialize mobile drawer navigation
+        initMobileDrawers();
+      } else {
+        if (desktopInstructions) desktopInstructions.style.display = 'block';
+        if (mobileInstructions) mobileInstructions.style.display = 'none';
+        
+        // Remove mobile navigation elements and ensure backdrop is cleared
+        removeMobileDrawers();
+        
+        // Force clear any remaining backdrop
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (backdrop) {
+          backdrop.classList.remove('active');
+          backdrop.remove();
+        }
+        document.body.style.overflow = '';
+      }
+    }
+    
+    // Mobile drawer navigation
+    function initMobileDrawers() {
+      // Remove existing mobile nav if any
+      removeMobileDrawers();
+      
+      // Ensure sidebars are properly positioned for mobile
+      const unassignedSidebar = document.getElementById('unassigned-sidebar');
+      const assignedSidebar = document.getElementById('assigned-sidebar');
+      
+      if (unassignedSidebar) {
+        unassignedSidebar.style.position = 'fixed';
+        unassignedSidebar.style.left = '0';
+        unassignedSidebar.style.top = '0';
+        unassignedSidebar.style.height = '100vh';
+        unassignedSidebar.style.width = '280px';
+        unassignedSidebar.style.maxWidth = '85vw';
+        unassignedSidebar.style.zIndex = '1050';
+        unassignedSidebar.style.transform = 'translateX(-100%)';
+        unassignedSidebar.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        unassignedSidebar.style.boxShadow = '2px 0 10px rgba(0, 0, 0, 0.2)';
+        unassignedSidebar.style.borderRadius = '0';
+        unassignedSidebar.style.margin = '0';
+        unassignedSidebar.style.display = 'block';
+      }
+      
+      if (assignedSidebar) {
+        assignedSidebar.style.position = 'fixed';
+        assignedSidebar.style.left = 'auto';
+        assignedSidebar.style.right = '0';
+        assignedSidebar.style.top = '0';
+        assignedSidebar.style.height = '100vh';
+        assignedSidebar.style.width = '280px';
+        assignedSidebar.style.maxWidth = '85vw';
+        assignedSidebar.style.zIndex = '1050';
+        assignedSidebar.style.transform = 'translateX(100%)';
+        assignedSidebar.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        assignedSidebar.style.boxShadow = '-2px 0 10px rgba(0, 0, 0, 0.2)';
+        assignedSidebar.style.borderRadius = '0';
+        assignedSidebar.style.margin = '0';
+        assignedSidebar.style.display = 'block';
+      }
+      
+      // Create backdrop
+      const backdrop = document.createElement('div');
+      backdrop.className = 'sidebar-backdrop';
+      backdrop.id = 'sidebar-backdrop';
+      document.body.appendChild(backdrop);
+      
+      // Create navigation buttons
+      const leftNavBtn = document.createElement('button');
+      leftNavBtn.className = 'mobile-nav-btn left';
+      leftNavBtn.innerHTML = '👥';
+      leftNavBtn.title = 'Unassigned Guests';
+      leftNavBtn.addEventListener('click', () => openMobileSidebar('unassigned-sidebar'));
+      
+      const rightNavBtn = document.createElement('button');
+      rightNavBtn.className = 'mobile-nav-btn right';
+      rightNavBtn.innerHTML = '📋';
+      rightNavBtn.title = 'Assigned Guests';
+      rightNavBtn.addEventListener('click', () => openMobileSidebar('assigned-sidebar'));
+      
+      document.body.appendChild(leftNavBtn);
+      document.body.appendChild(rightNavBtn);
+      
+      // Add backdrop click handler
+      backdrop.addEventListener('click', closeAllMobileSidebars);
+      
+      // Add swipe gestures
+      initSwipeGestures();
+    }
+    
+    function removeMobileDrawers() {
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const leftBtn = document.querySelector('.mobile-nav-btn.left');
+      const rightBtn = document.querySelector('.mobile-nav-btn.right');
+      
+      // Clear backdrop first
+      if (backdrop) {
+        backdrop.classList.remove('active');
+        backdrop.remove();
+      }
+      if (leftBtn) leftBtn.remove();
+      if (rightBtn) rightBtn.remove();
+      
+      // Reset sidebar styles for desktop
+      const unassignedSidebar = document.getElementById('unassigned-sidebar');
+      const assignedSidebar = document.getElementById('assigned-sidebar');
+      
+      if (unassignedSidebar) {
+        unassignedSidebar.style.position = '';
+        unassignedSidebar.style.left = '';
+        unassignedSidebar.style.top = '';
+        unassignedSidebar.style.height = '';
+        unassignedSidebar.style.width = '';
+        unassignedSidebar.style.maxWidth = '';
+        unassignedSidebar.style.zIndex = '';
+        unassignedSidebar.style.transform = '';
+        unassignedSidebar.style.transition = '';
+        unassignedSidebar.style.boxShadow = '';
+        unassignedSidebar.style.borderRadius = '';
+        unassignedSidebar.style.margin = '';
+        unassignedSidebar.style.display = '';
+      }
+      
+      if (assignedSidebar) {
+        assignedSidebar.style.position = '';
+        assignedSidebar.style.left = '';
+        assignedSidebar.style.right = '';
+        assignedSidebar.style.top = '';
+        assignedSidebar.style.height = '';
+        assignedSidebar.style.width = '';
+        assignedSidebar.style.maxWidth = '';
+        assignedSidebar.style.zIndex = '';
+        assignedSidebar.style.transform = '';
+        assignedSidebar.style.transition = '';
+        assignedSidebar.style.boxShadow = '';
+        assignedSidebar.style.borderRadius = '';
+        assignedSidebar.style.margin = '';
+        assignedSidebar.style.display = '';
+      }
+      
+      // Reset body overflow
+      document.body.style.overflow = '';
+      
+      // Close any open sidebars
+      closeAllMobileSidebars();
+    }
+    
+    function openMobileSidebar(sidebarId) {
+      const sidebar = document.getElementById(sidebarId);
+      const backdrop = document.getElementById('sidebar-backdrop');
+      
+      if (sidebar && backdrop) {
+        // Reset any existing transforms
+        sidebar.style.transform = '';
+        
+        // Apply the open transform
+        if (sidebarId === 'unassigned-sidebar') {
+          sidebar.style.transform = 'translateX(0)';
+        } else if (sidebarId === 'assigned-sidebar') {
+          sidebar.style.transform = 'translateX(0)';
+        }
+        
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    
+    function closeAllMobileSidebars() {
+      const sidebars = document.querySelectorAll('.sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      
+      sidebars.forEach(sidebar => {
+        if (sidebar.id === 'unassigned-sidebar') {
+          sidebar.style.transform = 'translateX(-100%)';
+        } else if (sidebar.id === 'assigned-sidebar') {
+          sidebar.style.transform = 'translateX(100%)';
+        }
+      });
+      
+      if (backdrop) {
+        backdrop.classList.remove('active');
+      }
+      
+      document.body.style.overflow = '';
+    }
+    
+    // Swipe gestures for mobile
+    function initSwipeGestures() {
+      let startX = 0;
+      let startY = 0;
+      let isSwiping = false;
+      
+      document.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isSwiping = false;
+      });
+      
+      document.addEventListener('touchmove', (e) => {
+        if (!startX || !startY) return;
+        
+        const deltaX = e.touches[0].clientX - startX;
+        const deltaY = e.touches[0].clientY - startY;
+        
+        // Check if it's a horizontal swipe
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+          isSwiping = true;
+          
+          // Right swipe from left edge opens unassigned sidebar
+          if (deltaX > 0 && startX < 50) {
+            openMobileSidebar('unassigned-sidebar');
+          }
+          // Left swipe from right edge opens assigned sidebar
+          else if (deltaX < 0 && startX > window.innerWidth - 50) {
+            openMobileSidebar('assigned-sidebar');
+          }
+        }
+      });
+      
+      document.addEventListener('touchend', () => {
+        startX = 0;
+        startY = 0;
+        isSwiping = false;
+      });
+    }
+    
+    // Initialize mobile features
+    document.addEventListener('DOMContentLoaded', initMobileFeatures);
+    window.addEventListener('resize', initMobileFeatures);
+    
+    // CSV template download functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const downloadTemplateBtn = document.getElementById('download-template-btn');
+      if (downloadTemplateBtn) {
+        downloadTemplateBtn.addEventListener('click', function() {
+          // Create CSV content
+          const csvContent = `Name,Email,Phone,Dietary Requirements,Plus One,Notes
+John Smith,john.smith@email.com,555-0123,None,Yes,Close friend
+Jane Doe,jane.doe@email.com,555-0124,Vegetarian,No,College roommate
+Bob Johnson,bob.johnson@email.com,555-0125,Gluten Free,Yes,Work colleague
+Sarah Wilson,sarah.wilson@email.com,555-0126,None,No,Family member
+Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
+          
+          // Create download link
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'guest_import_template.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        });
+      }
+    });
+  </script>
   <script>
     /* ============================
        Constants
@@ -145,7 +484,10 @@
        Guest (Person) Handling and Controls
     ============================ */
     let personCounter = 0;
-    function addPerson(name) {
+    let guestData = new Map(); // Store guest data with all fields
+  let guestDataByName = new Map(); // Store guest data by name (handles duplicates)
+    
+    function addPerson(guestInfo) {
       personCounter++;
       const person = document.createElement('div');
       person.className = 'person';
@@ -154,25 +496,57 @@
       person.addEventListener('dragstart', window.dragDropModule.handleDragStart);
       person.addEventListener('dragend', window.dragDropModule.handlePersonDragEnd);
       
+      // Handle both string (name only) and object (full guest data)
+      const name = typeof guestInfo === 'string' ? guestInfo : guestInfo.name;
+      const email = typeof guestInfo === 'string' ? '' : (guestInfo.email || '');
+      const phone = typeof guestInfo === 'string' ? '' : (guestInfo.phone || '');
+      const dietary = typeof guestInfo === 'string' ? '' : (guestInfo.dietary || '');
+      const plusOne = typeof guestInfo === 'string' ? 'No' : (guestInfo.plusOne || 'No');
+      const notes = typeof guestInfo === 'string' ? '' : (guestInfo.notes || '');
+      
+      // Clean the name to remove any dietary symbols
+      const cleanName = name.replace(/[✎✖🥗]/g, '').trim();
+      
+      // Use existing ID if available, otherwise create new one
+      const guestId = (typeof guestInfo === 'object' && guestInfo.id) ? guestInfo.id : 'person-' + personCounter;
+      const guestDataObj = {
+        id: guestId,
+        name: cleanName,
+        email: email,
+        phone: phone,
+        dietary: dietary,
+        plusOne: plusOne,
+        notes: notes
+      };
+      guestData.set(guestId, guestDataObj);
+      
+      // Also store by name for easier lookup (handles duplicates)
+      if (!guestDataByName.has(cleanName)) {
+        guestDataByName.set(cleanName, []);
+      }
+      guestDataByName.get(cleanName).push(guestDataObj);
+      
       const nameSpan = document.createElement('span');
       nameSpan.className = 'guest-name';
-      nameSpan.textContent = name;
+      nameSpan.textContent = cleanName;
+      
+      // Add dietary indicator if present
+      if (dietary && dietary !== '') {
+        const dietaryIcon = document.createElement('span');
+        dietaryIcon.className = 'dietary-indicator';
+        dietaryIcon.innerHTML = '🥗';
+        dietaryIcon.title = `Dietary: ${dietary}`;
+        nameSpan.appendChild(dietaryIcon);
+      }
       
       const controls = document.createElement('div');
       controls.className = 'guest-controls';
       const editBtn = document.createElement('button');
-      editBtn.title = "Edit guest";
+      editBtn.title = "Edit guest profile";
       editBtn.innerHTML = "✎";
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const currentName = nameSpan.textContent.replace(/[✎✖]/g, '').trim();
-        const newName = prompt("Edit guest name:", currentName);
-        if (newName && newName.trim() !== '') {
-          nameSpan.textContent = newName.trim();
-          // Update tooltips for this person
-          updateTooltipsForPerson(person);
-          updateCounts();
-        }
+        openGuestProfileModal(guestId, true);
       });
       controls.appendChild(editBtn);
       
@@ -182,6 +556,7 @@
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (confirm("Remove this guest?")) {
+          guestData.delete(guestId);
           person.remove();
           updateCounts();
         }
@@ -191,46 +566,206 @@
       person.appendChild(document.createElement('span')).innerHTML = '<span class="person-icon">👤</span>';
       person.appendChild(nameSpan);
       person.appendChild(controls);
+      
+      // Add touch listeners for mobile drag and drop
+      if (window.dragDropModule && window.dragDropModule.addTouchListeners) {
+        window.dragDropModule.addTouchListeners(person);
+      }
+      
       document.getElementById('people-list').appendChild(person);
       updateCounts();
     }
     
-    function createPersonElement(name) {
+    // Guest profile modal functionality
+    let editingGuestId = null;
+    
+    function openGuestProfileModal(guestId = null, isEditing = false) {
+      editingGuestId = guestId;
+      const modal = new bootstrap.Modal(document.getElementById('guestProfileModal'));
+      const form = document.getElementById('guestProfileForm');
+      const title = document.getElementById('guestProfileModalLabel');
+      
+      // Reset form
+      form.reset();
+      
+      if (isEditing && guestId && guestData.has(guestId)) {
+        // Editing existing guest
+        const guest = guestData.get(guestId);
+        title.textContent = 'Edit Guest Profile';
+        document.getElementById('guestName').value = guest.name.replace(/[✎✖🥗]/g, '').trim();
+        document.getElementById('guestEmail').value = guest.email;
+        document.getElementById('guestPhone').value = guest.phone;
+        document.getElementById('guestDietary').value = guest.dietary;
+        document.getElementById('guestPlusOne').value = guest.plusOne;
+        document.getElementById('guestNotes').value = guest.notes;
+      } else {
+        // Creating new guest
+        title.textContent = 'Add New Guest';
+        editingGuestId = null;
+      }
+      
+      modal.show();
+      
+      // Focus management for accessibility
+      setTimeout(() => {
+        const firstInput = document.getElementById('guestName');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+    }
+    
+    // Save guest profile
+    document.getElementById('saveGuestProfileBtn').addEventListener('click', function() {
+      const form = document.getElementById('guestProfileForm');
+      const name = document.getElementById('guestName').value.trim();
+      
+      if (!name) {
+        alert('Guest name is required');
+        return;
+      }
+      
+      const guestInfo = {
+        name: name,
+        email: document.getElementById('guestEmail').value.trim(),
+        phone: document.getElementById('guestPhone').value.trim(),
+        dietary: document.getElementById('guestDietary').value,
+        plusOne: document.getElementById('guestPlusOne').value,
+        notes: document.getElementById('guestNotes').value.trim()
+      };
+      
+      if (editingGuestId && guestData.has(editingGuestId)) {
+        // Update existing guest
+        guestData.set(editingGuestId, { ...guestData.get(editingGuestId), ...guestInfo });
+        updateGuestDisplay(editingGuestId);
+        
+        // Update assigned guests display if this guest is assigned to a table
+        updateAssignedGuestsDisplay();
+      } else {
+        // Create new guest
+        addPerson(guestInfo);
+        // Update assigned guests display in case this guest gets assigned
+        updateAssignedGuestsDisplay();
+      }
+      
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('guestProfileModal'));
+      modal.hide();
+      
+      updateCounts();
+    });
+    
+    // Add guest button functionality
+    document.getElementById('addGuestBtn').addEventListener('click', function() {
+      openGuestProfileModal(null, false);
+    });
+    
+    function updateGuestDisplay(guestId) {
+      const person = document.getElementById(guestId);
+      if (!person) return;
+      
+      const guest = guestData.get(guestId);
+      if (!guest) return;
+      
+      const nameSpan = person.querySelector('.guest-name');
+      
+      // Clear existing content and set clean name (remove any dietary symbols that might have been saved)
+      nameSpan.innerHTML = '';
+      const cleanName = guest.name.replace(/[✎✖🥗]/g, '').trim();
+      nameSpan.textContent = cleanName;
+      
+      // Update the guest data with the clean name
+      guestData.set(guestId, { ...guest, name: cleanName });
+      
+      // Add dietary indicator if present
+      if (guest.dietary && guest.dietary !== '') {
+        const dietaryIcon = document.createElement('span');
+        dietaryIcon.className = 'dietary-indicator';
+        dietaryIcon.innerHTML = '🥗';
+        dietaryIcon.title = `Dietary: ${guest.dietary}`;
+        nameSpan.appendChild(dietaryIcon);
+      }
+      
+      // Update tooltips
+      updateTooltipsForPerson(person);
+      
+      // Update assigned guests display to reflect changes
+      updateAssignedGuestsDisplay();
+    }
+    
+    // Function to update all guest displays (useful after import)
+    function updateAllGuestDisplays() {
+      for (let [guestId, guest] of guestData) {
+        updateGuestDisplay(guestId);
+      }
+    }
+    
+    function createPersonElement(guestInfo) {
       personCounter++;
       const person = document.createElement('div');
       person.className = 'person';
-      person.id = 'person-' + personCounter;
+      
+      // Handle both string (name only) and object (full guest data)
+      const name = typeof guestInfo === 'string' ? guestInfo : guestInfo.name;
+      const email = typeof guestInfo === 'string' ? '' : (guestInfo.email || '');
+      const phone = typeof guestInfo === 'string' ? '' : (guestInfo.phone || '');
+      const dietary = typeof guestInfo === 'string' ? '' : (guestInfo.dietary || '');
+      const plusOne = typeof guestInfo === 'string' ? 'No' : (guestInfo.plusOne || 'No');
+      const notes = typeof guestInfo === 'string' ? '' : (guestInfo.notes || '');
+      
+      // Clean the name to remove any dietary symbols
+      const cleanName = name.replace(/[✎✖🥗]/g, '').trim();
+      
+      // Use existing ID if available, otherwise create new one
+      const guestId = (typeof guestInfo === 'object' && guestInfo.id) ? guestInfo.id : 'person-' + personCounter;
+      person.id = guestId;
       person.draggable = true;
       person.addEventListener('dragstart', window.dragDropModule.handleDragStart);
       person.addEventListener('dragend', window.dragDropModule.handlePersonDragEnd);
       
+      // Store guest data
+      const guestDataObj = {
+        id: guestId,
+        name: cleanName,
+        email: email,
+        phone: phone,
+        dietary: dietary,
+        plusOne: plusOne,
+        notes: notes
+      };
+      guestData.set(guestId, guestDataObj);
+      
       const nameSpan = document.createElement('span');
       nameSpan.className = 'guest-name';
-      nameSpan.textContent = name;
+      nameSpan.textContent = cleanName;
+      
+      // Add dietary indicator if present
+      if (dietary && dietary !== '') {
+        const dietaryIcon = document.createElement('span');
+        dietaryIcon.className = 'dietary-indicator';
+        dietaryIcon.innerHTML = '🥗';
+        dietaryIcon.title = `Dietary: ${dietary}`;
+        nameSpan.appendChild(dietaryIcon);
+      }
       
       const controls = document.createElement('div');
       controls.className = 'guest-controls';
       const editBtn = document.createElement('button');
-      editBtn.title = "Edit guest";
+      editBtn.title = "Edit guest profile";
       editBtn.innerHTML = "✎";
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const currentName = nameSpan.textContent.replace(/[✎✖]/g, '').trim();
-        const newName = prompt("Edit guest name:", currentName);
-        if (newName && newName.trim() !== '') {
-          nameSpan.textContent = newName.trim();
-          // Update tooltips for this person
-          updateTooltipsForPerson(person);
-          updateCounts();
-        }
+        openGuestProfileModal(guestId, true);
       });
       controls.appendChild(editBtn);
+      
       const removeBtn = document.createElement('button');
       removeBtn.title = "Remove guest";
       removeBtn.innerHTML = "✖";
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (confirm("Remove this guest?")) {
+          guestData.delete(guestId);
           person.remove();
           updateCounts();
         }
@@ -240,6 +775,12 @@
       person.appendChild(document.createElement('span')).innerHTML = '<span class="person-icon">👤</span>';
       person.appendChild(nameSpan);
       person.appendChild(controls);
+      
+      // Add touch listeners for mobile drag and drop
+      if (window.dragDropModule && window.dragDropModule.addTouchListeners) {
+        window.dragDropModule.addTouchListeners(person);
+      }
+      
       return person;
     }
     
@@ -258,12 +799,32 @@
     });
     function parseGuestCSV(text) {
       const lines = text.split('\n');
-      lines.forEach(line => {
-        if (line.trim() === '') return;
-        const columns = line.split(',');
-        const name = columns[0].trim();
-        if (name) { addPerson(name); }
-      });
+      
+      // Clear existing people and guest data
+      document.getElementById('people-list').innerHTML = '';
+      guestData.clear();
+      personCounter = 0;
+      
+      // Skip header row and process each line
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line === '') continue;
+        
+        const columns = line.split(',').map(col => col.trim().replace(/^"|"$/g, ''));
+        const name = columns[0] || '';
+        
+        if (name) {
+          const guestInfo = {
+            name: name,
+            email: columns[1] || '',
+            phone: columns[2] || '',
+            dietary: columns[3] || '',
+            plusOne: columns[4] || 'No',
+            notes: columns[5] || ''
+          };
+          addPerson(guestInfo);
+        }
+      }
     }
     
     /* ============================
@@ -434,13 +995,25 @@
           guestItem.className = 'guest-item';
           
           if (guest.isAssigned) {
+            // Clean the guest name to remove any edit/delete symbols and dietary indicators
+            const cleanGuestName = guest.name.replace(/[✎✖🥗]/g, '').trim();
+            
+            // Find the guest data to check for dietary requirements
+            let dietaryIndicator = '';
+            if (guest.personElement && guest.personElement.id) {
+              const guestDataObj = guestData.get(guest.personElement.id);
+              if (guestDataObj && guestDataObj.dietary && guestDataObj.dietary !== '') {
+                dietaryIndicator = '🥗';
+              }
+            }
+            
             guestItem.innerHTML = `
               <div class="guest-info">
                 <span class="drag-handle-guest" title="Drag to reorder">⋮⋮</span>
-                <span class="guest-name">Seat ${guest.seatIndex}: ${guest.name}</span>
+                <span class="guest-name" style="cursor: pointer;">${cleanGuestName}${dietaryIndicator ? ' ' + dietaryIndicator : ''}</span>
               </div>
               <div class="guest-controls">
-                <button class="edit-guest-btn" title="Edit guest name">✎</button>
+                <button class="edit-guest-btn" title="Edit guest profile">✎</button>
                 <button class="remove-guest-btn" title="Remove from table">✖</button>
               </div>
             `;
@@ -459,25 +1032,49 @@
             guestItem.addEventListener('dragleave', handleGuestDragLeave);
             guestItem.addEventListener('drop', handleGuestDrop);
             
+            // Add touch support for mobile reordering
+            guestItem.addEventListener('touchstart', handleGuestTouchStart, { passive: false });
+            guestItem.addEventListener('touchmove', handleGuestTouchMove, { passive: false });
+            guestItem.addEventListener('touchend', handleGuestTouchEnd, { passive: false });
+            
             // Add hover highlighting for assigned guests
-            guestItem.addEventListener('mouseenter', function(e) {
+            const guestNameSpan = guestItem.querySelector('.guest-name');
+            guestNameSpan.addEventListener('mouseenter', function(e) {
               // Don't highlight if we're dragging
-              if (window.dragDropModule && window.dragDropModule.isDragging) return;
+              if (draggedGuest || draggedTable) {
+                return;
+              }
+              
+              // Check dragDropModule only if it exists and has the property
+              if (window.dragDropModule && typeof window.dragDropModule.isDragging === 'function' && window.dragDropModule.isDragging()) {
+                return;
+              }
               
               // Find the corresponding seat on the canvas and highlight it
               const tables = document.querySelectorAll('#canvas .table.card');
-              tables.forEach(table => {
-                const tableName = table.querySelector('.table-title')?.textContent || table.querySelector('.table-name')?.textContent;
-                if (tableName === tableData.name) {
+              let found = false;
+              tables.forEach((table, index) => {
+                const tableTitle = table.querySelector('.table-title')?.textContent;
+                const tableName = table.querySelector('.table-name')?.textContent;
+                const tableNameFinal = tableTitle || tableName;
+                
+                if (tableNameFinal === tableData.name) {
                   const seats = table.querySelectorAll('.card-body .seat');
-                  if (seats[guest.seatIndex - 1]) {
-                    seats[guest.seatIndex - 1].classList.add('highlighted-seat');
+                  const targetSeat = seats[guest.seatIndex - 1];
+                  if (targetSeat) {
+                    // Remove any existing highlights first
+                    document.querySelectorAll('.highlighted-seat').forEach(seat => {
+                      seat.classList.remove('highlighted-seat');
+                    });
+                    // Add highlight to the target seat
+                    targetSeat.classList.add('highlighted-seat');
+                    found = true;
                   }
                 }
               });
             });
             
-            guestItem.addEventListener('mouseleave', function(e) {
+            guestNameSpan.addEventListener('mouseleave', function(e) {
               // Remove highlighting from all seats
               const allSeats = document.querySelectorAll('#canvas .table.card .card-body .seat');
               allSeats.forEach(seat => {
@@ -485,47 +1082,43 @@
               });
             });
             
-            // Add click handler to edit guest name
+            // Add click and touch handlers to edit guest name
             const editBtn = guestItem.querySelector('.edit-guest-btn');
-            editBtn.addEventListener('click', function(e) {
-              e.stopPropagation(); // Prevent triggering the header click
-              const newName = prompt("Edit guest name:", guest.name);
-              if (newName && newName.trim() !== '') {
-                // Update the guest name in the assigned guests list
-                guest.name = newName.trim();
-                
-                // Find and update the actual guest element on the canvas
-                const tables = document.querySelectorAll('#canvas .table.card');
-                tables.forEach(table => {
-                  const tableName = table.querySelector('.table-title')?.textContent || table.querySelector('.table-name')?.textContent;
-                  if (tableName === tableData.name) {
-                    const seats = table.querySelectorAll('.card-body .seat');
-                    if (seats[guest.seatIndex - 1] && seats[guest.seatIndex - 1].children.length > 0) {
-                      const personElement = seats[guest.seatIndex - 1].children[0];
-                      const nameSpan = personElement.querySelector('.guest-name');
-                      if (nameSpan) {
-                        nameSpan.textContent = newName.trim();
-                        // Update tooltip for this seat
-                        const seat = seats[guest.seatIndex - 1];
-                        seat.setAttribute('data-tooltip', `${newName.trim()} (Click to edit, drag to move)`);
-                        seat.title = `${newName.trim()} (Click to edit, drag to move)`;
-                      }
-                    }
-                  }
-                });
-                
-                // Update the display in the assigned guests list
-                guestItem.querySelector('.guest-name').textContent = `Seat ${guest.seatIndex}: ${newName.trim()}`;
-                
-                // Update counts to refresh the display
-                updateCounts();
-              }
-            });
             
-            // Add click handler to remove guest from table
-            const removeBtn = guestItem.querySelector('.remove-guest-btn');
-            removeBtn.addEventListener('click', function(e) {
+            function handleEditClick(e) {
               e.stopPropagation(); // Prevent triggering the header click
+              e.preventDefault();
+              
+              // Find the actual guest element on the canvas to get its ID
+              let guestId = null;
+              const tables = document.querySelectorAll('#canvas .table.card');
+              tables.forEach(table => {
+                const tableName = table.querySelector('.table-title')?.textContent || table.querySelector('.table-name')?.textContent;
+                if (tableName === tableData.name) {
+                  const seats = table.querySelectorAll('.card-body .seat');
+                  if (seats[guest.seatIndex - 1] && seats[guest.seatIndex - 1].children.length > 0) {
+                    const personElement = seats[guest.seatIndex - 1].children[0];
+                    guestId = personElement.id;
+                  }
+                }
+              });
+              
+              // Open the guest profile modal
+              if (guestId) {
+                openGuestProfileModal(guestId, true);
+              }
+            }
+            
+            editBtn.addEventListener('click', handleEditClick);
+            editBtn.addEventListener('touchend', handleEditClick, { passive: false });
+            
+            // Add click and touch handlers to remove guest from table
+            const removeBtn = guestItem.querySelector('.remove-guest-btn');
+            
+            function handleRemoveClick(e) {
+              e.stopPropagation(); // Prevent triggering the header click
+              e.preventDefault();
+              
               if (confirm(`Remove ${guest.name} from ${tableData.name}?`)) {
                 // Find the actual seat and remove the guest
                 const tables = document.querySelectorAll('#canvas .table.card');
@@ -546,7 +1139,10 @@
                   }
                 });
               }
-            });
+            }
+            
+            removeBtn.addEventListener('click', handleRemoveClick);
+            removeBtn.addEventListener('touchend', handleRemoveClick, { passive: false });
           } else {
             // Empty seat
             guestItem.innerHTML = `
@@ -579,7 +1175,7 @@
             
             // Make empty seats droppable
             guestItem.addEventListener('dragover', function(e) {
-              e.preventDefault();
+      e.preventDefault();
               e.stopPropagation();
               if (isDragging && draggedElement) {
                 this.classList.add('over');
@@ -652,6 +1248,34 @@
             return;
           }
           content.classList.toggle('expanded');
+          header.classList.toggle('expanded');
+          
+          // Store expanded state
+          if (content.classList.contains('expanded')) {
+            expandedTables.add(tableData.name);
+          } else {
+            expandedTables.delete(tableData.name);
+          }
+        });
+        
+        // Add touch handler for mobile expand/collapse
+        header.addEventListener('touchend', function(e) {
+          // Don't expand/collapse if touching control buttons or if we were dragging
+          if (e.target.classList.contains('remove-guest-btn') || 
+              e.target.classList.contains('edit-guest-btn') ||
+              e.target.closest('.guest-controls') ||
+              tableTouchDragging) {
+            return;
+          }
+          content.classList.toggle('expanded');
+          header.classList.toggle('expanded');
+          
+          // Store expanded state
+          if (content.classList.contains('expanded')) {
+            expandedTables.add(tableData.name);
+          } else {
+            expandedTables.delete(tableData.name);
+          }
         });
         
         // Add drag and drop functionality
@@ -662,6 +1286,11 @@
         tableDiv.addEventListener('dragleave', handleTableDragLeave);
         tableDiv.addEventListener('drop', handleTableDrop);
         
+        // Add touch support for table reordering
+        tableDiv.addEventListener('touchstart', handleTableTouchStart, { passive: false });
+        tableDiv.addEventListener('touchmove', handleTableTouchMove, { passive: false });
+        tableDiv.addEventListener('touchend', handleTableTouchEnd, { passive: false });
+        
         tableDiv.appendChild(header);
         tableDiv.appendChild(content);
         assignedContainer.appendChild(tableDiv);
@@ -669,6 +1298,7 @@
         // Restore expanded state if this table was previously expanded
         if (expandedTables.has(tableData.name)) {
           content.classList.add('expanded');
+          header.classList.add('expanded');
         }
       });
     }
@@ -899,24 +1529,204 @@
       });
     }
     
-    /* ============================
-       Form to Add a New Guest
-    ============================ */
-    document.getElementById('addGuestForm').addEventListener('submit', function(e) {
+    // Mobile touch handlers for table reordering
+    let tableTouchStartY = 0;
+    let tableTouchDragging = false;
+    let tableTouchElement = null;
+    
+    function handleTableTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      tableTouchStartY = touch.clientY;
+      tableTouchDragging = false;
+      tableTouchElement = this;
+      
       e.preventDefault();
-      const newName = document.getElementById('newGuestName').value.trim();
-      if (newName) {
-        addPerson(newName);
-        document.getElementById('newGuestName').value = '';
+    }
+    
+    function handleTableTouchMove(e) {
+      if (e.touches.length !== 1 || !tableTouchElement) return;
+      
+      const touch = e.touches[0];
+      const deltaY = Math.abs(touch.clientY - tableTouchStartY);
+      
+      if (!tableTouchDragging && deltaY > 15) {
+        tableTouchDragging = true;
+        tableTouchElement.classList.add('dragging');
+        tableTouchElement.style.opacity = '0.7';
+        tableTouchElement.style.transform = 'scale(1.02)';
       }
-    });
+      
+      if (tableTouchDragging) {
+        e.preventDefault();
+        
+        // Find the element under the touch point
+        const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetTableDiv = elementUnderTouch?.closest('.table-assignment');
+        
+        if (targetTableDiv && targetTableDiv !== tableTouchElement) {
+          // Remove previous highlights
+          document.querySelectorAll('.table-assignment.drag-over').forEach(item => {
+            item.classList.remove('drag-over');
+          });
+          
+          targetTableDiv.classList.add('drag-over');
+        }
+      }
+    }
+    
+    function handleTableTouchEnd(e) {
+      if (!tableTouchDragging || !tableTouchElement) {
+        tableTouchDragging = false;
+        tableTouchElement = null;
+        return;
+      }
+      
+      const touch = e.changedTouches[0];
+      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetTableDiv = elementUnderTouch?.closest('.table-assignment');
+      
+      if (targetTableDiv && targetTableDiv !== tableTouchElement) {
+        // Perform the reorder
+        const container = document.getElementById('assigned-guests-list');
+        const allTables = Array.from(container.querySelectorAll('.table-assignment'));
+        const draggedIndex = allTables.indexOf(tableTouchElement);
+        const dropIndex = allTables.indexOf(targetTableDiv);
+        
+        if (draggedIndex !== -1 && dropIndex !== -1) {
+          if (draggedIndex < dropIndex) {
+            // Moving down
+            targetTableDiv.parentNode.insertBefore(tableTouchElement, targetTableDiv.nextSibling);
+          } else {
+            // Moving up
+            targetTableDiv.parentNode.insertBefore(tableTouchElement, targetTableDiv);
+          }
+        }
+      }
+      
+      // Clean up
+      tableTouchElement.classList.remove('dragging');
+      tableTouchElement.style.opacity = '';
+      tableTouchElement.style.transform = '';
+      tableTouchDragging = false;
+      tableTouchElement = null;
+      
+      // Remove all highlights
+      document.querySelectorAll('.table-assignment.drag-over').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+    }
+    
+    // Mobile touch handlers for guest reordering
+    let guestTouchStartY = 0;
+    let guestTouchDragging = false;
+    let guestTouchElement = null;
+    
+    function handleGuestTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      guestTouchStartY = touch.clientY;
+      guestTouchDragging = false;
+      guestTouchElement = this;
+      
+      e.preventDefault();
+    }
+    
+    function handleGuestTouchMove(e) {
+      if (e.touches.length !== 1 || !guestTouchElement) return;
+      
+      const touch = e.touches[0];
+      const deltaY = Math.abs(touch.clientY - guestTouchStartY);
+      
+      if (!guestTouchDragging && deltaY > 10) {
+        guestTouchDragging = true;
+        guestTouchElement.classList.add('dragging');
+        guestTouchElement.style.opacity = '0.7';
+        guestTouchElement.style.transform = 'scale(1.05)';
+      }
+      
+      if (guestTouchDragging) {
+        e.preventDefault();
+        
+        // Find the element under the touch point
+        const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetGuestItem = elementUnderTouch?.closest('.guest-item');
+        
+        if (targetGuestItem && targetGuestItem !== guestTouchElement && 
+            targetGuestItem.dataset.tableName === guestTouchElement.dataset.tableName) {
+          
+          // Remove previous highlights
+          document.querySelectorAll('.guest-item.drag-over').forEach(item => {
+            item.classList.remove('drag-over');
+          });
+          
+          targetGuestItem.classList.add('drag-over');
+        }
+      }
+    }
+    
+    function handleGuestTouchEnd(e) {
+      if (!guestTouchDragging || !guestTouchElement) {
+        guestTouchDragging = false;
+        guestTouchElement = null;
+        return;
+      }
+      
+      const touch = e.changedTouches[0];
+      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetGuestItem = elementUnderTouch?.closest('.guest-item');
+      
+      if (targetGuestItem && targetGuestItem !== guestTouchElement && 
+          targetGuestItem.dataset.tableName === guestTouchElement.dataset.tableName) {
+        
+        // Perform the reorder
+        const tableContent = targetGuestItem.closest('.table-assignment-content');
+        const allGuests = Array.from(tableContent.querySelectorAll('.guest-item:not(.empty-seat-item)'));
+        const draggedIndex = allGuests.indexOf(guestTouchElement);
+        const dropIndex = allGuests.indexOf(targetGuestItem);
+        
+        if (draggedIndex !== -1 && dropIndex !== -1) {
+          // Reorder in the assigned guests list
+          if (draggedIndex < dropIndex) {
+            // Moving down
+            targetGuestItem.parentNode.insertBefore(guestTouchElement, targetGuestItem.nextSibling);
+          } else {
+            // Moving up
+            targetGuestItem.parentNode.insertBefore(guestTouchElement, targetGuestItem);
+          }
+          
+          // Update the canvas to reflect the new order
+          updateCanvasFromAssignedGuestsOrder(tableContent);
+        }
+      }
+      
+      // Clean up
+      guestTouchElement.classList.remove('dragging');
+      guestTouchElement.style.opacity = '';
+      guestTouchElement.style.transform = '';
+      guestTouchDragging = false;
+      guestTouchElement = null;
+      
+      // Remove all highlights
+      document.querySelectorAll('.guest-item.drag-over').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+    }
+    
+    /* ============================
+       Add Guest Button (replaced form)
+    ============================ */
+    // Note: The add guest functionality is now handled by the "Add New Guest" button
+    // which opens the guest profile modal. The event listener is set up earlier in the code.
     
     /* ============================
        Table Handling with Variable Seat Count
     ============================ */
     let tableCounter = 0;
     function createTableContainer(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos) {
-      console.log('Creating table container:', { tableId, tableName, tableType, seatCount });
+      // Table container created successfully
       
       const tableContainer = document.createElement('div');
       tableContainer.className = 'table card' + (tableType === "circle" ? " circle" : "");
@@ -996,7 +1806,7 @@
         header.appendChild(nameDiv);
         header.appendChild(controlsDiv);
       } else {
-        console.log('Creating rectangle table header with name:', tableName);
+        // Creating rectangle table header
         const titleSpan = document.createElement('span');
         titleSpan.className = 'table-title';
         titleSpan.textContent = tableName;
@@ -1439,7 +2249,12 @@
        Export / Import State as JSON
     ============================ */
     function getState() {
-      const state = { tables: [], unassigned: [] };
+      const state = { 
+        tables: [], 
+        unassigned: [],
+        guestData: Array.from(guestData.values())
+      };
+      
       const tableElements = document.querySelectorAll("#canvas .table.card");
       tableElements.forEach(table => {
          const tableName = table.querySelector(".table-title")?.textContent || table.querySelector(".table-name").textContent;
@@ -1453,13 +2268,18 @@
          const seatElements = table.querySelectorAll(".card-body .seat");
          seatElements.forEach((seat, index) => {
             let guest = "";
+            let guestId = "";
             if (seat.children.length > 0) {
-                guest = seat.children[0].textContent.replace("👤", "").trim();
+                const personElement = seat.children[0];
+                guest = personElement.querySelector('.guest-name')?.textContent.replace(/[✎✖🥗]/g, '').trim() || "";
+                guestId = personElement.id || "";
             }
-            seats.push({ seatIndex: index + 1, guest: guest });
+            seats.push({ seatIndex: index + 1, guest: guest, guestId: guestId });
          });
          state.tables.push({ tableName, tableType, left, top, width, height, seatCount, seats });
       });
+      
+      // Add unassigned guests (for backward compatibility)
       const unassignedElements = document.querySelectorAll("#people-list .person");
 unassignedElements.forEach(person => {
    const guest = person.querySelector('.guest-name').textContent.trim();
@@ -1485,6 +2305,35 @@ unassignedElements.forEach(person => {
       const state = JSON.parse(jsonText);
       document.getElementById('canvas').innerHTML = "";
       document.getElementById('people-list').innerHTML = "";
+      
+      // Clear existing guest data
+      guestData.clear();
+      guestDataByName.clear();
+      personCounter = 0;
+      
+      // Create a map to store guest data by name for linking
+      const guestMap = new Map();
+      
+      // Import guest data if available (new format)
+      if (state.guestData && Array.isArray(state.guestData)) {
+        state.guestData.forEach(guest => {
+          // Clean the guest name to remove any dietary symbols
+          const cleanGuestName = guest.name.replace(/[✎✖🥗]/g, '').trim();
+          const cleanGuest = { ...guest, name: cleanGuestName };
+          // Store guest data by ID for proper linking
+          guestData.set(guest.id, cleanGuest);
+          // Also store by name for backward compatibility
+          guestMap.set(cleanGuestName, cleanGuest);
+          
+          // Populate guestDataByName for duplicate handling
+          if (!guestDataByName.has(cleanGuestName)) {
+            guestDataByName.set(cleanGuestName, []);
+          }
+          guestDataByName.get(cleanGuestName).push(cleanGuest);
+        });
+      }
+      
+      // Create tables first
       state.tables.forEach(table => {
          const tableId = 'table-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
          const seatCount = parseInt(table.seatCount);
@@ -1499,22 +2348,60 @@ unassignedElements.forEach(person => {
             const idx = seatData.seatIndex - 1;
             if (idx >= 0 && idx < seats.length && seatData.guest) {
                seats[idx].innerHTML = '';
-               const personElement = createPersonElement(seatData.guest);
-               seats[idx].appendChild(personElement);
+               
+               // Try to use guest ID first for proper linking
+               let fullGuestData = null;
+               if (seatData.guestId && guestData.has(seatData.guestId)) {
+                  fullGuestData = guestData.get(seatData.guestId);
+               } else {
+                  // Fallback to name-based lookup (but handle duplicates)
+                  const cleanSeatGuestName = seatData.guest.replace(/[✎✖🥗]/g, '').trim();
+                  const guestsWithSameName = guestDataByName.get(cleanSeatGuestName);
+                  if (guestsWithSameName && guestsWithSameName.length > 0) {
+                     // For duplicates, we need to be more careful about matching
+                     // Try to find the guest that matches the original data best
+                     fullGuestData = guestsWithSameName[0]; // Default to first match
+                  } else {
+                     fullGuestData = guestMap.get(cleanSeatGuestName);
+                  }
+               }
+               
+               if (fullGuestData) {
+                  // Use the full guest data to create the person element
+                  const personElement = createPersonElement(fullGuestData);
+                  seats[idx].appendChild(personElement);
+               } else {
+                  // Fallback to name-only guest (backward compatibility)
+                  const cleanSeatGuestName = seatData.guest.replace(/[✎✖🥗]/g, '').trim();
+                  const personElement = createPersonElement(cleanSeatGuestName);
+                  seats[idx].appendChild(personElement);
+               }
+               
                seats[idx].classList.add('filled');
                
-                     // Add tooltip to the seat element
-      let guestName = personElement.querySelector('.guest-name')?.textContent || 'Unknown Guest';
-      guestName = guestName.replace(/[✎✖]/g, '').trim();
-      seats[idx].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
-      seats[idx].title = `${guestName} (Click to edit, drag to move)`;
+               // Add tooltip to the seat element
+               let guestName = seats[idx].querySelector('.guest-name')?.textContent || 'Unknown Guest';
+               guestName = guestName.replace(/[✎✖]/g, '').trim();
+               seats[idx].setAttribute('data-tooltip', `${guestName} (Click to edit, drag to move)`);
+               seats[idx].title = `${guestName} (Click to edit, drag to move)`;
             }
          });
       });
+      
+      // Import unassigned guests (for backward compatibility with old format)
+      if (!state.guestData && state.unassigned) {
       state.unassigned.forEach(guest => {
          addPerson(guest);
       });
+      }
+      
       updateCounts();
+      
+      // Update all guest displays to show dietary indicators and other details
+      updateAllGuestDisplays();
+      
+      // Update assigned guests display to show dietary indicators
+      updateAssignedGuestsDisplay();
     }
     document.getElementById('importStateBtn').addEventListener('click', function() {
       document.getElementById('importStateFile').click();
@@ -1535,8 +2422,55 @@ unassignedElements.forEach(person => {
     function printPlan() {
       let html = '<html><head><title>Wedding Seating Plan</title>';
       html += '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">';
-      html += '<style>body{padding:20px; font-family: Roboto, sans-serif;} h1, h2 {margin-top:20px;} ul {list-style: none; padding: 0;} li {margin-bottom: 5px;}</style></head><body>';
+      html += '<style>';
+      html += 'body{padding:20px; font-family: Roboto, sans-serif;} ';
+      html += 'h1, h2, h3 {margin-top:20px; color: #333;} ';
+      html += 'ul {list-style: none; padding: 0;} ';
+      html += 'li {margin-bottom: 8px; padding: 8px; border: 1px solid #eee; border-radius: 4px;} ';
+      html += '.guest-details {font-size: 0.9em; color: #666; margin-top: 4px;} ';
+      html += '.dietary {color: #d63384; font-weight: bold; background: #fff5f5; padding: 2px 6px; border-radius: 3px;} ';
+      html += '.plus-one {color: #198754; font-weight: bold; background: #f0fff4; padding: 2px 6px; border-radius: 3px;} ';
+      html += '.contact-info {color: #0066cc; font-weight: 500;} ';
+      html += '.notes {color: #856404; background: #fff3cd; padding: 4px 8px; border-radius: 3px; font-style: italic;} ';
+      html += '.summary-section {background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;} ';
+      html += '.summary-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;} ';
+      html += '.summary-card {background: white; padding: 10px; border-radius: 5px; border-left: 4px solid #007bff;} ';
+      html += '</style></head><body>';
       html += '<h1>Wedding Seating Plan</h1>';
+      
+      // Create comprehensive summary section
+      const totalGuests = Array.from(guestData.values()).length;
+      const assignedGuests = Array.from(guestData.values()).filter(guest => {
+        // Check if guest is assigned to any table
+        const tables = document.querySelectorAll('#canvas .table.card');
+        for (let table of tables) {
+          const seats = table.querySelectorAll('.card-body .seat');
+          for (let seat of seats) {
+            if (seat.children.length > 0) {
+              const seatGuestName = seat.children[0].querySelector('.guest-name')?.textContent.replace(/[✎✖]/g, '').trim();
+              if (seatGuestName === guest.name) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      });
+      
+      const dietaryGuestsSummary = Array.from(guestData.values()).filter(guest => guest.dietary && guest.dietary !== '');
+      const plusOneGuests = Array.from(guestData.values()).filter(guest => guest.plusOne === 'Yes');
+      const guestsWithNotes = Array.from(guestData.values()).filter(guest => guest.notes && guest.notes.trim() !== '');
+      
+      html += '<div class="summary-section">';
+      html += '<h2>Event Summary</h2>';
+      html += '<div class="summary-grid">';
+      html += `<div class="summary-card"><strong>Total Guests:</strong> ${totalGuests}</div>`;
+      html += `<div class="summary-card"><strong>Assigned to Tables:</strong> ${assignedGuests.length}</div>`;
+      html += `<div class="summary-card"><strong>Dietary Requirements:</strong> ${dietaryGuestsSummary.length}</div>`;
+      html += `<div class="summary-card"><strong>Plus Ones:</strong> ${plusOneGuests.length}</div>`;
+      html += `<div class="summary-card"><strong>Special Notes:</strong> ${guestsWithNotes.length}</div>`;
+      html += '</div>';
+      html += '</div>';
       
       // Get tables in the order they appear in the assigned guests panel
       const assignedContainer = document.getElementById('assigned-guests-list');
@@ -1554,11 +2488,47 @@ unassignedElements.forEach(person => {
           guestItems.forEach(guestItem => {
             const guestNameElement = guestItem.querySelector('.guest-name');
             if (guestNameElement) {
-              // Extract only the guest name, excluding any edit buttons
+              // Extract only the guest name, excluding any edit buttons and seat number
               let guestName = guestNameElement.textContent;
-              // Remove any edit button text (✎ or ✖) and clean up
-              guestName = guestName.replace(/[✎✖]/g, '').trim();
-              html += `<li>${guestName}</li>`;
+              // Remove seat number prefix and any edit button text (✎ or ✖) and clean up
+              guestName = guestName.replace(/^Seat \d+: /, '').replace(/[✎✖🥗]/g, '').trim();
+              
+              // Use the guest ID from the assigned guests list for accurate lookup
+              const guestId = guestItem.dataset.personId;
+              let guestDetails = '';
+              
+              if (guestId && guestData.has(guestId)) {
+                const guest = guestData.get(guestId);
+                const details = [];
+                if (guest.email) details.push(`<span class="contact-info">📧 ${guest.email}</span>`);
+                if (guest.phone) details.push(`<span class="contact-info">📞 ${guest.phone}</span>`);
+                if (guest.dietary) details.push(`<span class="dietary">🥗 ${guest.dietary}</span>`);
+                if (guest.plusOne === 'Yes') details.push(`<span class="plus-one">👥 Plus One</span>`);
+                if (guest.notes) details.push(`<span class="notes">💬 ${guest.notes}</span>`);
+                
+                if (details.length > 0) {
+                  guestDetails = `<div class="guest-details">${details.join(' • ')}</div>`;
+                }
+              } else {
+                // Fallback to name-based lookup for backward compatibility
+                for (let [id, guest] of guestData) {
+                  if (guest.name === guestName) {
+                    const details = [];
+                    if (guest.email) details.push(`<span class="contact-info">📧 ${guest.email}</span>`);
+                    if (guest.phone) details.push(`<span class="contact-info">📞 ${guest.phone}</span>`);
+                    if (guest.dietary) details.push(`<span class="dietary">🥗 ${guest.dietary}</span>`);
+                    if (guest.plusOne === 'Yes') details.push(`<span class="plus-one">👥 Plus One</span>`);
+                    if (guest.notes) details.push(`<span class="notes">💬 ${guest.notes}</span>`);
+                    
+                    if (details.length > 0) {
+                      guestDetails = `<div class="guest-details">${details.join(' • ')}</div>`;
+                    }
+                    break;
+                  }
+                }
+              }
+              
+              html += `<li>${guestName}${guestDetails}</li>`;
             }
           });
           
@@ -1566,22 +2536,77 @@ unassignedElements.forEach(person => {
         }
       });
       
-      // Get unassigned guests
+      // Get unassigned guests with details
       const unassignedGuests = [];
       const unassignedElements = document.querySelectorAll('#people-list .person');
       unassignedElements.forEach(person => {
         const guestName = person.querySelector('.guest-name')?.textContent || 'Unknown Guest';
-        unassignedGuests.push(guestName);
+        const cleanName = guestName.replace(/[✎✖🥗]/g, '').trim();
+        
+        // Use the person's ID for accurate guest data lookup
+        const guestId = person.id;
+        let guestDetails = '';
+        
+        if (guestId && guestData.has(guestId)) {
+          const guest = guestData.get(guestId);
+          const details = [];
+          if (guest.email) details.push(`<span class="contact-info">📧 ${guest.email}</span>`);
+          if (guest.phone) details.push(`<span class="contact-info">📞 ${guest.phone}</span>`);
+          if (guest.dietary) details.push(`<span class="dietary">🥗 ${guest.dietary}</span>`);
+          if (guest.plusOne === 'Yes') details.push(`<span class="plus-one">👥 Plus One</span>`);
+          if (guest.notes) details.push(`<span class="notes">💬 ${guest.notes}</span>`);
+          
+          if (details.length > 0) {
+            guestDetails = `<div class="guest-details">${details.join(' • ')}</div>`;
+          }
+        } else {
+          // Fallback to name-based lookup for backward compatibility
+          for (let [id, guest] of guestData) {
+            if (guest.name === cleanName) {
+              const details = [];
+              if (guest.email) details.push(`<span class="contact-info">📧 ${guest.email}</span>`);
+              if (guest.phone) details.push(`<span class="contact-info">📞 ${guest.phone}</span>`);
+              if (guest.dietary) details.push(`<span class="dietary">🥗 ${guest.dietary}</span>`);
+              if (guest.plusOne === 'Yes') details.push(`<span class="plus-one">👥 Plus One</span>`);
+              if (guest.notes) details.push(`<span class="notes">💬 ${guest.notes}</span>`);
+              
+              if (details.length > 0) {
+                guestDetails = `<div class="guest-details">${details.join(' • ')}</div>`;
+              }
+              break;
+            }
+          }
+        }
+        
+        unassignedGuests.push({ name: cleanName, details: guestDetails });
       });
       
       if (unassignedGuests.length > 0) {
          html += '<h2>Unassigned Guests</h2>';
          html += '<ul>';
          unassignedGuests.forEach(guest => {
-            html += `<li>${guest}</li>`;
+            html += `<li>${guest.name}${guest.details}</li>`;
          });
          html += '</ul>';
       }
+      
+      // Add dietary requirements summary
+      const dietaryGuests = [];
+      for (let [id, guest] of guestData) {
+        if (guest.dietary && guest.dietary !== '') {
+          dietaryGuests.push({ name: guest.name, dietary: guest.dietary });
+        }
+      }
+      
+      if (dietaryGuests.length > 0) {
+        html += '<h2>Dietary Requirements Summary</h2>';
+        html += '<ul>';
+        dietaryGuests.forEach(guest => {
+          html += `<li><span class="dietary">${guest.dietary}</span>: ${guest.name}</li>`;
+        });
+        html += '</ul>';
+      }
+      
       html += '</body></html>';
       const printWindow = window.open('', '', 'width=800,height=600');
       printWindow.document.write(html);
@@ -1600,7 +2625,7 @@ unassignedElements.forEach(person => {
       const tableType = document.getElementById('tableType').value;
       const seatCount = parseInt(document.getElementById('seatCount').value);
       
-      console.log('Creating table:', { tableName, tableType, seatCount });
+              // Creating new table
       
       if (!tableName || isNaN(seatCount) || seatCount < 1) {
         console.log('Validation failed:', { tableName, seatCount });

@@ -122,10 +122,8 @@ h1, h2, h5 {
   margin-top: 10px;
 }
 
-/* Divider between add guest and search fields */
-#addGuestForm {
-  border-bottom: 1px solid #e9ecef;
-  padding-bottom: 15px;
+/* Add Guest Button styling */
+#addGuestBtn {
   margin-bottom: 15px;
 }
 #people-list .person {
@@ -188,6 +186,13 @@ h1, h2, h5 {
 
 .person-icon {
   margin-right: 8px;
+}
+
+/* Dietary indicator */
+.dietary-indicator {
+  margin-left: 6px;
+  font-size: 0.8em;
+  opacity: 0.8;
 }
 
 /* Seat styling */
@@ -788,8 +793,9 @@ h1, h2, h5 {
   min-width: 50px !important;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scaleX(0.95);
-  opacity: 0.9;
+  opacity: 0.8;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 #unassigned-sidebar.collapsed #people-container,
@@ -798,11 +804,12 @@ h1, h2, h5 {
   text-align: center;
 }
 
-/* Ensure toggle button has proper spacing when collapsed */
+/* Show only toggle button when collapsed */
 #unassigned-sidebar.collapsed .sidebar-header,
 #assigned-sidebar.collapsed .sidebar-header {
   padding: 0 8px;
   justify-content: center;
+  display: flex;
 }
 
 #unassigned-sidebar.collapsed .sidebar-header h5,
@@ -811,19 +818,16 @@ h1, h2, h5 {
 }
 
 #unassigned-sidebar.collapsed #guestSeatCounts,
-#unassigned-sidebar.collapsed #addGuestForm,
+#unassigned-sidebar.collapsed #addGuestBtn,
 #unassigned-sidebar.collapsed #people-search-input,
 #unassigned-sidebar.collapsed #people-list,
 #assigned-sidebar.collapsed #assigned-guests-list {
-  opacity: 0;
-  transform: translateX(-10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
+  display: none;
 }
 
 /* Animate content when sidebar expands */
 #unassigned-sidebar:not(.collapsed) #guestSeatCounts,
-#unassigned-sidebar:not(.collapsed) #addGuestForm,
+#unassigned-sidebar:not(.collapsed) #addGuestBtn,
 #unassigned-sidebar:not(.collapsed) #people-search-input,
 #unassigned-sidebar:not(.collapsed) #people-list,
 #assigned-sidebar:not(.collapsed) #assigned-guests-list {
@@ -858,27 +862,1142 @@ h1, h2, h5 {
   transform-origin: center;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  #main-layout {
-    flex-direction: column;
-    height: auto;
+/* ============================
+   Mobile-First Responsive Design
+============================ */
+
+/* Mobile breakpoints */
+@media (max-width: 767px) {
+  /* Mobile-first layout */
+  body {
+    padding: 5px;
+    font-size: 14px;
   }
   
-  .sidebar {
+  .container-fluid {
+    padding: 0 5px;
+  }
+  
+  /* Mobile controls - compact and touch-friendly */
+  #controls {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  #controls .row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  #controls .col-md-4,
+  #controls .col-md-8 {
     width: 100%;
-    min-width: 100%;
-    margin-bottom: 10px;
+    text-align: left;
+  }
+  
+  #controls .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    margin: 2px;
+    min-height: 44px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  
+  #controls .text-end {
+    text-align: left !important;
+  }
+  
+  /* Mobile button grid */
+  #controls .col-md-8 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px;
+  }
+  
+  /* Mobile main layout - full screen canvas */
+  #main-layout {
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    gap: 0;
+  }
+  
+  /* Mobile canvas container - full screen */
+  #canvas-container {
+    flex: 1;
+    height: 100%;
+    min-height: auto;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    position: relative;
+  }
+  
+  /* Mobile navigation buttons */
+  .mobile-nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 123, 255, 0.9);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1030;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+  
+  .mobile-nav-btn:hover {
+    background: rgba(0, 123, 255, 1);
+    transform: translateY(-50%) scale(1.1);
+  }
+  
+  .mobile-nav-btn:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+  
+  .mobile-nav-btn.left {
+    left: 10px;
+  }
+  
+  .mobile-nav-btn.right {
+    right: 10px;
+  }
+  
+  /* Mobile sidebars - slide-out drawers */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    border-radius: 0;
+    margin: 0;
+    left: 0;
+    display: block !important;
+  }
+  
+  /* Right sidebar positioning */
+  #assigned-sidebar {
+    left: auto !important;
+    right: 0;
+    transform: translateX(100%);
+  }
+  
+  /* Show sidebars when active */
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  /* Mobile sidebar backdrop */
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  /* Mobile sidebar headers - drawer style */
+  .sidebar-header {
+    padding: 16px 20px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+  }
+  
+  .sidebar-header h5 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
   }
   
   .sidebar-toggle {
-    padding: 6px 10px;
-    font-size: 0.9em;
+    min-width: 44px;
+    height: 44px;
+    font-size: 16px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #dee2e6;
   }
   
+  /* Mobile collapsed sidebars - hide on mobile */
   #unassigned-sidebar.collapsed,
   #assigned-sidebar.collapsed {
-    width: 60px !important;
-    min-width: 60px !important;
+    display: none;
+  }
+  
+  /* Mobile canvas container */
+  #canvas-container {
+    flex: 1;
+    min-height: 55vh;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Mobile touch-friendly elements */
+  .person {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  
+  .guest-controls button {
+    min-width: 44px;
+    height: 44px;
+    font-size: 16px;
+    padding: 8px;
+  }
+  
+  /* Mobile form elements */
+  #addGuestBtn {
+    height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    margin-bottom: 10px;
+  }
+  
+  #people-search-input {
+    height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Mobile sidebar content */
+  #people-container,
+  #assigned-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  
+  /* Mobile guest lists */
+  #people-list,
+  #assigned-guests-list {
+    flex: 1;
+    overflow-y: auto;
+   /* padding: 16px; */
+  }
+  
+  /* Mobile form elements in sidebars */
+  #addGuestBtn {
+    margin: 16px;
+    margin-bottom: 8px;
+  }
+  
+  #people-search-input {
+    margin: 16px;
+    margin-top: 0;
+  }
+  
+  /* Mobile table assignments */
+  .table-assignment {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+  }
+  
+  .table-assignment-header {
+    padding: 8px 12px;
+    min-height: 44px;
+  }
+  
+  .guest-item {
+    padding: 8px 12px;
+    min-height: 44px;
+  }
+  
+  /* Mobile modals */
+  .modal-dialog {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+  }
+  
+  .modal-content {
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 15px 20px;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  /* Mobile canvas instructions */
+  #controls p {
+    font-size: 12px;
+    margin: 5px 0;
+    color: #666;
+  }
+}
+
+/* Tablet breakpoint - preserve desktop-like experience */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Keep current desktop layout but adjust sizing */
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+  }
+  
+  #controls .btn {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .person {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+}
+
+/* Large tablet and desktop - current experience preserved */
+@media (min-width: 1024px) {
+  /* Ensure mobile styles don't interfere with desktop */
+  .sidebar {
+    position: static !important;
+    height: auto !important;
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: none !important;
+    z-index: auto !important;
+    transform: none !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+    left: auto !important;
+    right: auto !important;
+    display: flex !important;
+  }
+  
+  /* Reset mobile-specific sidebar positioning */
+  #assigned-sidebar {
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+  }
+  
+  /* Ensure main layout works correctly */
+  #main-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    height: calc(100vh - 200px) !important;
+    gap: 10px !important;
+  }
+  
+  /* Reset canvas container */
+  #canvas-container {
+    flex: 1 !important;
+    min-width: 0 !important;
+    background: #fff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+    padding: 15px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: static !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+  
+  /* Hide mobile navigation elements */
+  .mobile-nav-btn,
+  .sidebar-backdrop {
+    display: none !important;
+  }
+  
+  /* Show desktop instructions, hide mobile */
+  .desktop-instructions {
+    display: block !important;
+  }
+  
+  .mobile-instructions {
+    display: none !important;
+  }
+}
+
+/* ============================
+   Mobile-Specific Enhancements
+============================ */
+
+/* Mobile touch feedback */
+@media (max-width: 767px) {
+  /* Enhanced touch feedback for mobile */
+  .person:active,
+  .seat:active,
+  .btn:active {
+    transform: scale(0.98);
+    transition: transform 0.05s ease;
+  }
+  
+  /* Smooth touch interactions */
+  .person,
+  .seat,
+  .btn,
+  .table.card {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Mobile-specific seat styling */
+  .seat {
+    width: 44px;
+    height: 44px;
+    border-width: 3px;
+  }
+  
+  /* Mobile table cards */
+  .table.card {
+    margin-bottom: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .table.card .card-header {
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  /* Mobile scrollbar styling */
+  #people-list::-webkit-scrollbar,
+  #assigned-guests-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  #people-list::-webkit-scrollbar-thumb,
+  #assigned-guests-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+
+  
+  /* Mobile canvas instructions */
+  .mobile-instructions {
+    background: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+    margin-bottom: 8px;
+  }
+  
+  /* Hide desktop instructions on mobile */
+  #controls p {
+    display: none;
+  }
+  
+  /* Mobile optimized modals */
+  .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  /* Mobile list item spacing */
+  .table-assignment-content .guest-item {
+    margin-bottom: 6px;
+    padding: 8px 12px;
+  }
+  
+  /* Mobile search optimization */
+  #people-search-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+  
+  /* Mobile drag feedback */
+  .person.dragging {
+    transform: rotate(2deg) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Mobile seat drop zones */
+  .seat.over {
+    border-color: #28a745;
+    border-width: 4px;
+    transform: scale(1.1);
+  }
+  
+  /* Mobile table assignment hover */
+  .table-assignment:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Prevent text selection on mobile */
+@media (max-width: 767px) {
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Allow text selection in inputs */
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+} 
+
+/* ============================
+   Mobile Touch Drag and Drop Styles
+============================ */
+
+/* Touch drag indicator */
+.touch-drag-indicator {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  background: rgba(0, 123, 255, 0.9);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.drag-indicator-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.drag-indicator-icon {
+  font-size: 16px;
+}
+
+.drag-indicator-text {
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Touch dragging states */
+.touch-dragging {
+  opacity: 0.7;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+}
+
+.touch-over {
+  background-color: #e7f3ff !important;
+  border: 2px dashed #007bff !important;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Hide desktop sidebar toggle buttons on mobile */
+  .sidebar-toggle {
+    display: none !important;
+  }
+  
+  /* Improved sidebar header spacing - reduced */
+  .sidebar-header {
+    padding: 6px 8px;
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .sidebar-header h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  
+  /* Better container spacing - reduced padding */
+  #people-container {
+    padding: 8px;
+  }
+  
+  #assigned-container {
+    padding: 6px;
+  }
+  
+  /* Improved guest/seat counts spacing - reduced */
+  #guestSeatCounts {
+    margin: 6px 0;
+    padding: 6px 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+  }
+  
+  /* Better add guest button spacing - reduced */
+  #addGuestBtn {
+    margin: 8px 0;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  
+  /* Improved search input spacing - reduced */
+  #people-search-input {
+    margin: 6px 0 8px 0;
+    padding: 10px 12px;
+    font-size: 15px;
+    border-radius: 6px;
+  }
+  
+  /* Better people list spacing */
+  #people-list {
+    margin-top: 8px;
+  }
+  
+  /* Larger touch targets */
+  .person {
+    min-height: 48px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+  }
+  
+  .seat {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  /* Better visual feedback for touch */
+  .person:active {
+    background-color: #e7f3ff;
+    transform: scale(0.98);
+  }
+  
+  .seat:active {
+    background-color: #e7f3ff;
+    transform: scale(0.95);
+  }
+  
+  /* Improved drop zone visibility */
+  .drop-zone {
+    background: linear-gradient(45deg, #e7f3ff 25%, transparent 25%), 
+                linear-gradient(-45deg, #e7f3ff 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #e7f3ff 75%), 
+                linear-gradient(-45deg, transparent 75%, #e7f3ff 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    border: 2px dashed #007bff;
+  }
+  
+  /* Enhanced dragging feedback */
+  .dragging {
+    opacity: 0.8;
+    transform: rotate(3deg) scale(1.1);
+    box-shadow: 0 8px 24px rgba(0, 123, 255, 0.3);
+  }
+  
+  /* Better button sizing for touch */
+  .guest-controls button {
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 16px;
+    margin: 0 2px;
+  }
+  
+  /* Improved table controls */
+  .table-controls button {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 14px;
+    margin: 3px;
+  }
+  
+  /* Fix assigned guests list for mobile - restore desktop-like appearance */
+  .table-assignment {
+    margin-bottom: 4px;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  .table-assignment-header {
+    padding: 4px 6px;
+    background: #f8f9fa;
+    border-radius: 3px;
+    margin-bottom: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .table-assignment-header::after {
+    content: '▼';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #6c757d;
+    transition: transform 0.2s ease;
+  }
+  
+  .table-assignment-content.expanded {
+    max-height: 500px;
+    padding: 4px 6px;
+  }
+  
+  .table-assignment-content.expanded {
+    max-height: 500px;
+    padding: 4px 6px;
+  }
+  
+  /* Rotate arrow when content is expanded */
+  .table-assignment-header.expanded::after {
+    transform: translateY(-50%) rotate(180deg);
+  }
+  
+  .table-assignment-content {
+    padding: 0 6px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  
+  .table-assignment-content.expanded {
+    max-height: 500px;
+    padding: 4px 6px;
+  }
+  
+  .guest-item {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+  
+  .guest-info {
+    gap: 4px;
+  }
+  
+  .guest-name {
+    font-size: 13px;
+  }
+  
+  /* Ensure drag handles are visible and touchable */
+  .drag-handle, .drag-handle-guest {
+    font-size: 16px;
+    color: #6c757d;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  
+  .drag-handle:active, .drag-handle-guest:active {
+    cursor: grabbing;
+  }
+  
+  /* Touch drag feedback for guest items */
+  .guest-item.dragging {
+    opacity: 0.7;
+    transform: scale(1.05);
+    z-index: 1000;
+    position: relative;
+  }
+  
+  .guest-item.drag-over {
+    background-color: #e7f3ff !important;
+    border-left: 3px solid #007bff !important;
+    transform: translateX(4px);
+  }
+  
+  /* Ensure guest items are touch-friendly */
+  .guest-item {
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Table touch drag feedback */
+  .table-assignment.dragging {
+    opacity: 0.7;
+    transform: scale(1.02);
+    z-index: 1000;
+    position: relative;
+  }
+  
+  .table-assignment.drag-over {
+    background-color: #e7f3ff !important;
+    border-left: 3px solid #007bff !important;
+    transform: translateX(4px);
+  }
+  
+  /* Ensure table assignments are touch-friendly */
+  .table-assignment {
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Make guest names more hoverable */
+  .guest-name {
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  
+  .guest-name:hover {
+    color: #007bff;
+  }
+  
+  /* Make edit and remove buttons more touch-friendly on mobile */
+  .edit-guest-btn,
+  .remove-guest-btn {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    touch-action: manipulation;
+  }
+  
+  .edit-guest-btn {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .edit-guest-btn:hover,
+  .edit-guest-btn:active {
+    background-color: #0056b3;
+    transform: scale(1.1);
+  }
+  
+  .remove-guest-btn {
+    background-color: #dc3545;
+    color: white;
+  }
+  
+  .remove-guest-btn:hover,
+  .remove-guest-btn:active {
+    background-color: #c82333;
+    transform: scale(1.1);
+  }
+  
+  /* Ensure guest controls are properly spaced */
+  .guest-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  
+  /* Highlighted seat styling */
+  .highlighted-seat {
+    background-color: #ffeb3b !important;
+    box-shadow: 0 0 15px rgba(255, 235, 59, 0.8) !important;
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    position: relative;
+  }
+  
+  /* Ensure highlighted seats are visible on all devices */
+  .highlighted-seat::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid #ff9800;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+}
+
+/* Prevent text selection during drag */
+.dragging, .touch-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Smooth transitions for all interactive elements */
+.person, .seat, .guest-controls button, .table-controls button {
+  transition: all 0.2s ease;
+}
+
+/* Enhanced focus states for accessibility */
+.person:focus, .seat:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* Success animation for drops */
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); background-color: #d4edda; }
+  100% { transform: scale(1); }
+}
+
+/* Mobile-specific table layout improvements */
+@media (max-width: 768px) {
+  .table.card {
+    margin: 12px;
+    min-width: 140px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .table-title {
+    font-size: 16px;
+    padding: 10px 12px;
+    font-weight: 600;
+  }
+  
+  /* Better seat spacing on mobile */
+  .card-body {
+    padding: 12px;
+  }
+  
+  .seat {
+    margin: 3px;
+    border-radius: 50%;
+  }
+  
+  /* Improved table controls spacing */
+  .table-controls {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  
+  /* Better canvas container spacing */
+  #canvas-container {
+    padding: 8px;
+  }
+  
+  /* Improved main layout spacing */
+  #main-layout {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Touch-friendly modal improvements */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+  }
+  
+  .modal-header {
+    padding: 16px 20px;
+  }
+  
+  .modal-header h5 {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .modal-footer {
+    padding: 16px 20px;
+    gap: 8px;
+  }
+  
+  .form-control, .form-select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .form-label {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  
+  .btn {
+    min-height: 48px;
+    font-size: 16px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  
+  /* Better form row spacing */
+  .row {
+    margin: 0 -8px;
+  }
+  
+  .col-md-6 {
+    padding: 0 8px;
+  }
+  
+  /* Improved textarea spacing */
+  textarea.form-control {
+    min-height: 80px;
+    resize: vertical;
+  }
+}
+
+/* ============================
+   Simple Mobile CSS Fixes
+============================ */
+@media (max-width: 768px) {
+  /* Fix guest name display - remove the problematic flex and text-overflow */
+  .guest-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    flex: none;
+    margin-right: 8px;
+  }
+  
+  /* Fix guest item layout */
+  .guest-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+  }
+  
+  /* Fix guest info layout */
+  .guest-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  
+  /* Ensure guest controls don't shrink */
+  .guest-controls {
+    flex-shrink: 0;
+  }
+  
+  /* Fix table assignment header layout */
+  .table-assignment-header > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  
+  .table-assignment-header .table-name {
+    flex: 1;
+  }
+  
+  .table-assignment-header .guest-count {
+    flex-shrink: 0;
+  }
+  
+  /* Enable touch scrolling within table content */
+  .table-assignment-content {
+    touch-action: pan-y;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ensure guest items don't interfere with scrolling */
+  .guest-item {
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Enable scrolling for the assigned guests container */
+  #assigned-container {
+    touch-action: pan-y;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce padding between mobile controls and buttons */
+  .mobile-controls {
+    margin-bottom: 8px;
+  }
+  
+  /* Move template button into main button section */
+  .template-btn {
+    margin-bottom: 12px;
+  }
+  
+  /* Fix button overlap with tables on canvas */
+  .action-buttons {
+    margin-bottom: 20px;
+  }
+  
+  /* Ensure canvas has proper spacing from buttons */
+  #canvas {
+    margin-top: 16px;
+  }
+  
+  /* Improve mobile button layout */
+  .col-md-8.text-end {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  
+  .col-md-8.text-end .btn {
+    margin: 0 !important;
+    flex-shrink: 0;
+  }
+  
+  /* Better mobile controls spacing */
+  .mobile-instructions {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  
+  /* Ensure proper spacing between controls and canvas */
+  #controls {
+    margin-bottom: 16px;
   }
 } 
