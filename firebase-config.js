@@ -51,6 +51,12 @@ function initCollaboration() {
   });
   
   console.log('Collaboration initialized for user:', currentUserId);
+  
+  // Load existing data from Firebase first
+  loadFromFirebase();
+  
+  // Then start listening for updates
+  listenForUpdates();
 }
 
 // Debounce save operations to prevent feedback loops
@@ -75,7 +81,15 @@ function saveToFirebase(state) {
     return;
   }
   
+  // Check if we have meaningful data to save
+  const hasTables = state.tables && Object.keys(state.tables).length > 0;
+  if (!hasTables) {
+    console.log('Not saving empty state to Firebase');
+    return;
+  }
+  
   saveTimeout = setTimeout(() => {
+    console.log('Saving state to Firebase with', Object.keys(state.tables).length, 'tables');
     database.ref('seatingPlan').set({
       ...state,
       lastUpdated: firebase.database.ServerValue.TIMESTAMP,
@@ -86,22 +100,26 @@ function saveToFirebase(state) {
     }).catch((error) => {
       console.error('Error saving to Firebase:', error);
     });
-  }, 1000); // Wait 1 second before saving - faster sync
+  }, 300); // Reduced to 300ms for faster sync
 }
 
 // Load state from Firebase
 function loadFromFirebase() {
   if (!isCollaborating) return;
   
+  console.log('Loading state from Firebase...');
   database.ref('seatingPlan').once('value').then((snapshot) => {
     const data = snapshot.val();
+    console.log('Firebase data received:', !!data);
+    
     if (data && data.tables && Object.keys(data.tables).length > 0) {
-      // Only load if there's meaningful data in Firebase
+      // Load data from Firebase
       const { lastUpdated, updatedBy, ...cleanData } = data;
+      console.log('Loading tables from Firebase:', Object.keys(cleanData.tables).length);
       importState(JSON.stringify(cleanData));
       console.log('State loaded from Firebase');
     } else {
-      console.log('Firebase is empty, keeping current state');
+      console.log('Firebase is empty or has no tables, keeping current state');
     }
   }).catch((error) => {
     console.error('Error loading from Firebase:', error);
@@ -136,36 +154,10 @@ function listenForUpdates() {
           mergedData.tables = cleanData.tables;
           console.log(`Updating all tables - count changed from ${currentTablesCount} to ${incomingTablesCount}`);
         } else if (currentTablesCount === 0 && incomingTablesCount > 0) {
-          // If we have no tables and incoming has tables, validate the data first
-          console.log(`Validating incoming data before initial load...`);
-          
-          // Check if incoming data has wrong guest assignments
-          let hasWrongData = false;
-          for (const tableId in cleanData.tables) {
-            const table = cleanData.tables[tableId];
-            if (table.name === 'Head Table - Long Way') {
-              const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
-              const wrongGuestSet = ['Matthew Molnar', 'Sophie Osborne', 'Shamaurie Cunningham', 'Ameera Khan', 'Harry May', 'Callum Day', 'Ross Phelps', 'Ronnie Morgan'].sort();
-              const incomingGuests = [...guests].sort();
-              
-              if (JSON.stringify(incomingGuests) === JSON.stringify(wrongGuestSet)) {
-                console.log('BLOCKING INITIAL LOAD: Firebase contains wrong Head Table data');
-                console.log('Wrong guests detected:', incomingGuests);
-                hasWrongData = true;
-                break;
-              }
-            }
-          }
-          
-          if (hasWrongData) {
-            console.log('Rejecting initial load due to wrong data - keeping empty state');
-            return; // Don't load the wrong data
-          }
-          
-          // Data is valid, proceed with load
+          // If we have no tables and incoming has tables, load the data
+          console.log(`Loading tables from Firebase (no local tables)`);
           shouldUpdate = true;
           mergedData.tables = cleanData.tables;
-          console.log(`Loading tables from Firebase (no local tables) - data validated`);
         } else {
           // Check each table for significant changes (not just minor differences)
           for (const tableId in cleanData.tables) {
@@ -178,7 +170,28 @@ function listenForUpdates() {
               shouldUpdate = true;
               console.log(`Adding new table ${tableId}`);
             } else {
-              // Compare guest assignments (the important part)
+              // Check ALL table properties for changes, not just guest assignments
+              let tableHasChanges = false;
+              
+              // Check table name
+              if (currentTable.name !== incomingTable.name) {
+                console.log(`Table ${tableId} name changed: "${currentTable.name}" → "${incomingTable.name}"`);
+                tableHasChanges = true;
+              }
+              
+              // Check seat count
+              if (currentTable.seatCount !== incomingTable.seatCount) {
+                console.log(`Table ${tableId} seat count changed: ${currentTable.seatCount} → ${incomingTable.seatCount}`);
+                tableHasChanges = true;
+              }
+              
+              // Check table position
+              if (currentTable.left !== incomingTable.left || currentTable.top !== incomingTable.top) {
+                console.log(`Table ${tableId} position changed: (${currentTable.left}, ${currentTable.top}) → (${incomingTable.left}, ${incomingTable.top})`);
+                tableHasChanges = true;
+              }
+              
+              // Check guest assignments
               const currentGuests = currentTable.seats?.map(s => s.guest).filter(g => g) || [];
               const incomingGuests = incomingTable.seats?.map(s => s.guest).filter(g => g) || [];
               
@@ -186,45 +199,20 @@ function listenForUpdates() {
               const sortedCurrentGuests = [...currentGuests].sort();
               const sortedIncomingGuests = [...incomingGuests].sort();
               
-              // Only update if guest assignments are significantly different
               if (sortedCurrentGuests.length !== sortedIncomingGuests.length || 
                   !sortedCurrentGuests.every((guest, index) => guest === sortedIncomingGuests[index])) {
-                
-                // DATA VALIDATION: Don't overwrite correct data with wrong data
-                // Check if current data has meaningful guest assignments
-                const currentHasRealGuests = sortedCurrentGuests.length > 0 && 
-                  sortedCurrentGuests.some(guest => guest && guest.trim() !== '');
-                const incomingHasRealGuests = sortedIncomingGuests.length > 0 && 
-                  sortedIncomingGuests.some(guest => guest && guest.trim() !== '');
-                
-                // ADVANCED VALIDATION: Check for specific known correct vs wrong guest sets
-                const correctGuestSet = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'].sort();
-                const wrongGuestSet = ['Matthew Molnar', 'Sophie Osborne', 'Shamaurie Cunningham', 'Ameera Khan', 'Harry May', 'Callum Day', 'Ross Phelps', 'Ronnie Morgan'].sort();
-                
-                // If current has correct guests and incoming has wrong guests, keep current
-                const currentHasCorrectGuests = JSON.stringify(sortedCurrentGuests) === JSON.stringify(correctGuestSet);
-                const incomingHasWrongGuests = JSON.stringify(sortedIncomingGuests) === JSON.stringify(wrongGuestSet);
-                
-                if (currentHasCorrectGuests && incomingHasWrongGuests) {
-                  console.log(`BLOCKING WRONG DATA: Keeping correct guests for table ${tableId}`);
-                  console.log('Current (correct):', sortedCurrentGuests);
-                  console.log('Incoming (wrong):', sortedIncomingGuests);
-                  continue; // Skip this table update
-                }
-                
-                // If current has real guests and incoming doesn't, or if current has more guests, keep current
-                if (currentHasRealGuests && (!incomingHasRealGuests || sortedCurrentGuests.length > sortedIncomingGuests.length)) {
-                  console.log(`Keeping current guest assignments for table ${tableId} - current data is more complete`);
-                  console.log('Current guests:', sortedCurrentGuests);
-                  console.log('Incoming guests:', sortedIncomingGuests);
-                  continue; // Skip this table update
-                }
-                
+                console.log(`Table ${tableId} guest assignments changed:`, {
+                  current: sortedCurrentGuests,
+                  incoming: sortedIncomingGuests
+                });
+                tableHasChanges = true;
+              }
+              
+              // Update if ANY changes detected
+              if (tableHasChanges) {
                 mergedData.tables[tableId] = incomingTable;
                 shouldUpdate = true;
-                console.log(`Updating table ${tableId} - guest assignments changed`);
-                console.log('Current guests:', sortedCurrentGuests);
-                console.log('Incoming guests:', sortedIncomingGuests);
+                console.log(`Updating table ${tableId} - changes detected`);
               }
             }
           }
@@ -466,34 +454,69 @@ function nuclearReset() {
 // Make nuclear reset available globally
 window.nuclearReset = nuclearReset;
 
-// Debug function to check all table guest assignments
+// Comprehensive debugging function
 function debugTableAssignments() {
   if (!isCollaborating) return;
   
-  console.log('=== DEBUGGING TABLE ASSIGNMENTS ===');
+  console.log('=== COMPREHENSIVE DEBUGGING ===');
   
+  // Get current user info
+  console.log('Current user ID:', currentUserId);
+  console.log('Is collaborating:', isCollaborating);
+  console.log('Is updating from Firebase:', isUpdatingFromFirebase);
+  console.log('Last saved state exists:', !!lastSavedState);
+  
+  // Get Firebase data
   database.ref('seatingPlan').once('value').then((snapshot) => {
     const firebaseData = snapshot.val();
     const localData = getState();
     
-    console.log('Firebase data:', firebaseData);
-    console.log('Local data:', localData);
-    
-    if (firebaseData && firebaseData.tables) {
-      console.log('=== FIREBASE TABLE ASSIGNMENTS ===');
-      for (const tableId in firebaseData.tables) {
-        const table = firebaseData.tables[tableId];
-        const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
-        console.log(`Table ${tableId} (${table.name}):`, guests);
+    console.log('=== FIREBASE DATA ===');
+    console.log('Firebase data exists:', !!firebaseData);
+    if (firebaseData) {
+      console.log('Firebase lastUpdated:', firebaseData.lastUpdated);
+      console.log('Firebase updatedBy:', firebaseData.updatedBy);
+      console.log('Firebase tables count:', firebaseData.tables ? Object.keys(firebaseData.tables).length : 0);
+      
+      if (firebaseData.tables) {
+        for (const tableId in firebaseData.tables) {
+          const table = firebaseData.tables[tableId];
+          const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+          console.log(`Firebase Table ${tableId} (${table.name}):`, guests);
+        }
       }
     }
     
-    if (localData && localData.tables) {
-      console.log('=== LOCAL TABLE ASSIGNMENTS ===');
+    console.log('=== LOCAL DATA ===');
+    console.log('Local tables count:', localData.tables ? Object.keys(localData.tables).length : 0);
+    
+    if (localData.tables) {
       for (const tableId in localData.tables) {
         const table = localData.tables[tableId];
         const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
-        console.log(`Table ${tableId} (${table.name}):`, guests);
+        console.log(`Local Table ${tableId} (${table.name}):`, guests);
+      }
+    }
+    
+    // Check for mismatches
+    console.log('=== MISMATCH ANALYSIS ===');
+    if (firebaseData && firebaseData.tables && localData.tables) {
+      for (const tableId in firebaseData.tables) {
+        const firebaseTable = firebaseData.tables[tableId];
+        const localTable = localData.tables[tableId];
+        
+        if (localTable) {
+          const firebaseGuests = firebaseTable.seats?.map(s => s.guest).filter(g => g) || [];
+          const localGuests = localTable.seats?.map(s => s.guest).filter(g => g) || [];
+          
+          if (JSON.stringify(firebaseGuests) !== JSON.stringify(localGuests)) {
+            console.log(`❌ MISMATCH in table ${tableId} (${firebaseTable.name}):`);
+            console.log('  Firebase:', firebaseGuests);
+            console.log('  Local:', localGuests);
+          } else {
+            console.log(`✅ MATCH in table ${tableId} (${firebaseTable.name})`);
+          }
+        }
       }
     }
   });
@@ -801,4 +824,276 @@ function forceCorrectSync() {
 }
 
 // Make force correct sync available globally
-window.forceCorrectSync = forceCorrectSync; 
+window.forceCorrectSync = forceCorrectSync;
+
+// CLIENT NUCLEAR RESET - Force client to clear local state and reload
+function clientNuclearReset() {
+  if (!isCollaborating) return;
+  
+  console.log('CLIENT NUCLEAR RESET: Clearing local state completely...');
+  
+  // Stop collaboration first
+  isCollaborating = false;
+  if (presenceRef) {
+    presenceRef.remove();
+  }
+  
+  // Clear ALL local state
+  tables = {};
+  guestData.clear();
+  personCounter = 0;
+  
+  // Clear all DOM elements
+  const canvas = document.getElementById('canvas');
+  if (canvas) {
+    canvas.innerHTML = '';
+  }
+  
+  const peopleList = document.getElementById('people-list');
+  if (peopleList) {
+    peopleList.innerHTML = '';
+  }
+  
+  const assignedGuestsContainer = document.getElementById('assigned-guests-list');
+  if (assignedGuestsContainer) {
+    assignedGuestsContainer.innerHTML = '';
+  }
+  
+  // Clear counts
+  const countDiv = document.getElementById('guestSeatCounts');
+  if (countDiv) {
+    countDiv.innerHTML = 'Total Guests: 0 &nbsp;&nbsp; Total Seats: 0';
+  }
+  
+  console.log('Local state completely cleared');
+  
+  // Wait 1 second, then restart collaboration
+  setTimeout(() => {
+    // Restart collaboration
+    initCollaboration();
+    listenForUpdates();
+    
+    // Update UI
+    document.getElementById('collaborateIcon').textContent = '🟢';
+    document.getElementById('collaborateText').textContent = 'Collaborating';
+    document.getElementById('collaborateBtn').classList.remove('btn-primary');
+    document.getElementById('collaborateBtn').classList.add('btn-success');
+    document.getElementById('syncBtn').style.display = 'inline-block';
+    
+    console.log('CLIENT NUCLEAR RESET: Collaboration restarted with clean slate');
+    showCollaborationMessage('Client nuclear reset complete! Clean slate established.', 'success');
+  }, 1000);
+}
+
+// Make client nuclear reset available globally
+window.clientNuclearReset = clientNuclearReset;
+
+// Test Firebase listener and data flow
+function testFirebaseListener() {
+  if (!isCollaborating) return;
+  
+  console.log('=== TESTING FIREBASE LISTENER ===');
+  
+  // Test 1: Check if listener is working
+  console.log('Test 1: Checking Firebase listener...');
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    console.log('Firebase listener test - data received:', !!data);
+    if (data) {
+      console.log('Data structure:', Object.keys(data));
+      console.log('Tables count:', data.tables ? Object.keys(data.tables).length : 0);
+    }
+  });
+  
+  // Test 2: Force a save and see what happens
+  console.log('Test 2: Forcing a save...');
+  const testState = getState();
+  console.log('Current state tables count:', testState.tables ? Object.keys(testState.tables).length : 0);
+  
+  database.ref('seatingPlan').set({
+    ...testState,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: currentUserId,
+    testSave: true
+  }).then(() => {
+    console.log('Test save completed');
+  });
+  
+  // Test 3: Check if our listener receives the update
+  console.log('Test 3: Checking if listener receives updates...');
+  setTimeout(() => {
+    console.log('Listener test completed - check if you see listener logs above');
+  }, 2000);
+}
+
+// Make test function available globally
+window.testFirebaseListener = testFirebaseListener;
+
+// Root cause analysis - check what's actually happening
+function rootCauseAnalysis() {
+  if (!isCollaborating) return;
+  
+  console.log('=== ROOT CAUSE ANALYSIS ===');
+  
+  // Check 1: What data is in Firebase right now?
+  console.log('Check 1: Current Firebase data...');
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const firebaseData = snapshot.val();
+    console.log('Firebase has data:', !!firebaseData);
+    
+    if (firebaseData && firebaseData.tables) {
+      // Show all table data
+      console.log('Firebase tables:', Object.keys(firebaseData.tables));
+      for (const tableId in firebaseData.tables) {
+        const table = firebaseData.tables[tableId];
+        const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+        console.log(`Firebase Table ${tableId} (${table.name}):`, guests);
+      }
+    }
+    
+    // Check 2: What data does this client have locally?
+    console.log('Check 2: Local data...');
+    const localData = getState();
+    if (localData && localData.tables) {
+      console.log('Local tables:', Object.keys(localData.tables));
+      for (const tableId in localData.tables) {
+        const table = localData.tables[tableId];
+        const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+        console.log(`Local Table ${tableId} (${table.name}):`, guests);
+      }
+    }
+    
+    // Check 3: Is the listener working?
+    console.log('Check 3: Listener status...');
+    console.log('Is collaborating:', isCollaborating);
+    console.log('Is updating from Firebase:', isUpdatingFromFirebase);
+    console.log('Last update time:', lastUpdateTime);
+    
+    // Check 4: Force a clean save
+    console.log('Check 4: Forcing clean save...');
+    const cleanState = getState();
+    console.log('Saving current state as-is to Firebase');
+    
+    // Save to Firebase
+    database.ref('seatingPlan').set({
+      ...cleanState,
+      lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+      updatedBy: currentUserId,
+      rootCauseFix: true,
+      timestamp: Date.now()
+    }).then(() => {
+      console.log('Clean save completed');
+      console.log('=== ROOT CAUSE ANALYSIS COMPLETE ===');
+      console.log('Next: Check if client receives this update');
+    });
+  });
+}
+
+// Make root cause analysis available globally
+window.rootCauseAnalysis = rootCauseAnalysis;
+
+// ACTUAL TEST RUNNER - runs all tests automatically
+function runAllTests() {
+  console.log('🧪 RUNNING ALL TESTS AUTOMATICALLY');
+  console.log('=====================================');
+  
+  // Test 1: Check collaboration status
+  console.log('\n📋 TEST 1: Collaboration Status');
+  console.log('Is collaborating:', isCollaborating);
+  console.log('Current user ID:', currentUserId);
+  console.log('Is updating from Firebase:', isUpdatingFromFirebase);
+  
+  // Test 2: Check Firebase connection
+  console.log('\n🔥 TEST 2: Firebase Connection');
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    console.log('Firebase connection working:', !!data);
+    console.log('Firebase has data:', !!data);
+    if (data) {
+      console.log('Firebase data keys:', Object.keys(data));
+      console.log('Firebase tables count:', data.tables ? Object.keys(data.tables).length : 0);
+    }
+    
+    // Test 3: Compare Firebase vs Local
+    console.log('\n🔄 TEST 3: Firebase vs Local Comparison');
+    const localData = getState();
+    console.log('Local tables count:', localData.tables ? Object.keys(localData.tables).length : 0);
+    
+    if (data && data.tables && localData.tables) {
+      console.log('\n📊 DETAILED COMPARISON:');
+      for (const tableId in data.tables) {
+        const firebaseTable = data.tables[tableId];
+        const localTable = localData.tables[tableId];
+        
+        if (localTable) {
+          const firebaseGuests = firebaseTable.seats?.map(s => s.guest).filter(g => g) || [];
+          const localGuests = localTable.seats?.map(s => s.guest).filter(g => g) || [];
+          
+          console.log(`\nTable: ${firebaseTable.name}`);
+          console.log('  Firebase guests:', firebaseGuests);
+          console.log('  Local guests:', localGuests);
+          console.log('  Match:', JSON.stringify(firebaseGuests.sort()) === JSON.stringify(localGuests.sort()));
+        }
+      }
+    }
+    
+    // Test 4: Force a test save
+    console.log('\n💾 TEST 4: Test Save');
+    const testState = getState();
+    console.log('Saving test state...');
+    
+    database.ref('seatingPlan').set({
+      ...testState,
+      lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+      updatedBy: currentUserId,
+      testRun: true,
+      testTimestamp: Date.now()
+    }).then(() => {
+      console.log('✅ Test save completed');
+      
+      // Test 5: Check if listener receives it
+      console.log('\n👂 TEST 5: Listener Test');
+      setTimeout(() => {
+        console.log('Listener test completed - check if you see listener logs above');
+        console.log('\n🎯 TEST RESULTS SUMMARY:');
+        console.log('If you see "Received and merged real-time update" above, listener is working');
+        console.log('If Firebase and Local data match, sync is working');
+        console.log('If they don\'t match, there\'s a sync issue');
+      }, 2000);
+    });
+  });
+}
+
+// Make test runner available globally
+window.runAllTests = runAllTests;
+
+// IMMEDIATE FIX - Force client to load correct data
+function fixClientData() {
+  console.log('🔧 FIXING CLIENT DATA...');
+  
+  // Step 1: Load correct data from Firebase
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const data = snapshot.val();
+    console.log('Firebase data:', !!data);
+    
+    if (data && data.tables && Object.keys(data.tables).length > 0) {
+      console.log('Loading correct data from Firebase...');
+      const { lastUpdated, updatedBy, ...cleanData } = data;
+      importState(JSON.stringify(cleanData));
+      console.log('✅ Client data fixed - loaded from Firebase');
+      
+      // Step 2: Update displays
+      setTimeout(() => {
+        updateCounts();
+        updateAssignedGuestsDisplay();
+        updateAllGuestDisplays();
+        console.log('✅ Displays updated');
+      }, 100);
+    } else {
+      console.log('❌ No data in Firebase to load');
+    }
+  });
+}
+
+// Make fix function available globally
+window.fixClientData = fixClientData; 

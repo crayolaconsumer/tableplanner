@@ -273,6 +273,11 @@ function handleSeatDrop(personElement, seat) {
   }
   
   updateCounts();
+  
+  // Trigger auto-save for guest movement
+  if (typeof debouncedAutoSave === 'function') {
+    debouncedAutoSave();
+  }
 }
 
 function handleUnassignedDrop(personElement) {
@@ -299,6 +304,11 @@ function handleUnassignedDrop(personElement) {
   addTouchListeners(personElement);
   
   updateCounts();
+  
+  // Trigger auto-save for guest movement to unassigned
+  if (typeof debouncedAutoSave === 'function') {
+    debouncedAutoSave();
+  }
 }
 
 // Function to add touch listeners to a person element

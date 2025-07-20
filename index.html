@@ -1830,7 +1830,15 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
         renameBtn.addEventListener('click', function(e) {
           e.stopPropagation();
           const newName = prompt('Enter new table name:', nameDiv.textContent);
-          if (newName) { nameDiv.textContent = newName; }
+          if (newName) { 
+            nameDiv.textContent = newName; 
+            // Update the assigned guests display to reflect the new name
+            updateAssignedGuestsDisplay();
+            // Trigger auto-save for table renaming
+            if (typeof debouncedAutoSave === 'function') {
+              debouncedAutoSave();
+            }
+          }
         });
         controlsDiv.appendChild(renameBtn);
         const editSeatsBtn = document.createElement('button');
@@ -1890,7 +1898,15 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
         renameBtn.addEventListener('click', function(e) {
           e.stopPropagation();
           const newName = prompt('Enter new table name:', titleSpan.textContent);
-          if (newName) { titleSpan.textContent = newName; }
+          if (newName) { 
+            titleSpan.textContent = newName; 
+            // Update the assigned guests display to reflect the new name
+            updateAssignedGuestsDisplay();
+            // Trigger auto-save for table renaming
+            if (typeof debouncedAutoSave === 'function') {
+              debouncedAutoSave();
+            }
+          }
         });
         controlsDiv.appendChild(renameBtn);
         const editSeatsBtn = document.createElement('button');
@@ -2263,6 +2279,11 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       
       // Update counts and assigned guests display
       updateCounts();
+      
+      // Trigger auto-save for table seat count changes
+      if (typeof debouncedAutoSave === 'function') {
+        debouncedAutoSave();
+      }
     }
     
     /* ============================
