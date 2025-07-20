@@ -1041,8 +1041,8 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             // Add hover highlighting for assigned guests
             const guestNameSpan = guestItem.querySelector('.guest-name');
             guestNameSpan.addEventListener('mouseenter', function(e) {
-              // Don't highlight if we're dragging
-              if (draggedGuest || draggedTable) {
+              // Don't highlight if we're dragging (check both old and new dragging systems)
+              if (draggedGuest || draggedTable || guestTouchDragging || tableTouchDragging) {
                 return;
               }
               
@@ -1076,6 +1076,50 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             });
             
             guestNameSpan.addEventListener('mouseleave', function(e) {
+              // Remove highlighting from all seats
+              const allSeats = document.querySelectorAll('#canvas .table.card .card-body .seat');
+              allSeats.forEach(seat => {
+                seat.classList.remove('highlighted-seat');
+              });
+            });
+            
+            // Also add mouseenter to the entire guest item for better hover detection
+            guestItem.addEventListener('mouseenter', function(e) {
+              // Don't highlight if we're dragging (check both old and new dragging systems)
+              if (draggedGuest || draggedTable || guestTouchDragging || tableTouchDragging) {
+                return;
+              }
+              
+              // Check dragDropModule only if it exists and has the property
+              if (window.dragDropModule && typeof window.dragDropModule.isDragging === 'function' && window.dragDropModule.isDragging()) {
+                return;
+              }
+              
+              // Find the corresponding seat on the canvas and highlight it
+              const tables = document.querySelectorAll('#canvas .table.card');
+              let found = false;
+              tables.forEach((table, index) => {
+                const tableTitle = table.querySelector('.table-title')?.textContent;
+                const tableName = table.querySelector('.table-name')?.textContent;
+                const tableNameFinal = tableTitle || tableName;
+                
+                if (tableNameFinal === tableData.name) {
+                  const seats = table.querySelectorAll('.card-body .seat');
+                  const targetSeat = seats[guest.seatIndex - 1];
+                  if (targetSeat) {
+                    // Remove any existing highlights first
+                    document.querySelectorAll('.highlighted-seat').forEach(seat => {
+                      seat.classList.remove('highlighted-seat');
+                    });
+                    // Add highlight to the target seat
+                    targetSeat.classList.add('highlighted-seat');
+                    found = true;
+                  }
+                }
+              });
+            });
+            
+            guestItem.addEventListener('mouseleave', function(e) {
               // Remove highlighting from all seats
               const allSeats = document.querySelectorAll('#canvas .table.card .card-body .seat');
               allSeats.forEach(seat => {
@@ -1240,7 +1284,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
           content.appendChild(guestItem);
         });
         
-                // Add click handler to expand/collapse table (works for both desktop and mobile)
+                // Add click handler to expand/collapse table (desktop only)
         header.addEventListener('click', function(e) {
           // Don't expand/collapse if clicking on control buttons
           if (e.target.classList.contains('remove-guest-btn') || 
@@ -1249,19 +1293,17 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             return;
           }
           
-          // On mobile, only handle click if we weren't dragging
-          if (window.innerWidth <= 768 && tableTouchDragging && tableTouchElement === tableDiv) {
-            return;
-          }
-          
-          content.classList.toggle('expanded');
-          header.classList.toggle('expanded');
-          
-          // Store expanded state
-          if (content.classList.contains('expanded')) {
-            expandedTables.add(tableData.name);
-          } else {
-            expandedTables.delete(tableData.name);
+          // Only handle clicks on desktop (mobile uses touchend)
+          if (window.innerWidth > 768) {
+            content.classList.toggle('expanded');
+            header.classList.toggle('expanded');
+            
+            // Store expanded state
+            if (content.classList.contains('expanded')) {
+              expandedTables.add(tableData.name);
+            } else {
+              expandedTables.delete(tableData.name);
+            }
           }
         });
         

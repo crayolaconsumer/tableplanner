@@ -2121,6 +2121,34 @@ h1, h2, h5 {
     border: 2px solid #007bff;
   }
   
+  /* Improved hover highlighting for assigned seats */
+  .highlighted-seat {
+    background-color: #ffeb3b !important;
+    box-shadow: 0 0 15px rgba(255, 235, 59, 0.8) !important;
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    position: relative;
+  }
+  
+  .highlighted-seat::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid #ff9800;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  
   /* Reduce padding between mobile controls and buttons */
   .mobile-controls {
     margin-bottom: 8px;
