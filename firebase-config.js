@@ -178,6 +178,13 @@ function listenForUpdates() {
             importState(JSON.stringify(mergedData));
             console.log('Received and merged real-time update from another user');
             
+            // Force update all displays after collaboration sync
+            setTimeout(() => {
+              updateCounts();
+              updateAssignedGuestsDisplay();
+              updateAllGuestDisplays();
+            }, 100);
+            
             // Update our last saved state to prevent re-saving
             lastSavedState = JSON.stringify(mergedData);
           } catch (error) {

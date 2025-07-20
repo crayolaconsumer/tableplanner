@@ -2900,6 +2900,13 @@ unassignedElements.forEach(person => {
                 const { lastUpdated, updatedBy, ...cleanData } = data;
                 importState(JSON.stringify(cleanData));
                 console.log('Loaded initial data from Firebase (no local tables)');
+                
+                // Force update all displays after loading from Firebase
+                setTimeout(() => {
+                  updateCounts();
+                  updateAssignedGuestsDisplay();
+                  updateAllGuestDisplays();
+                }, 100);
               } else {
                 console.log('Keeping current state - already have tables');
               }
@@ -3019,6 +3026,12 @@ unassignedElements.forEach(person => {
       if (isCollaborating) {
         const state = getState();
         saveToFirebase(state);
+        
+        // Force refresh all displays
+        updateCounts();
+        updateAssignedGuestsDisplay();
+        updateAllGuestDisplays();
+        
         showCollaborationMessage('Manual sync completed!', 'success');
       }
     });
