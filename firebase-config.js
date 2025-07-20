@@ -165,11 +165,26 @@ function listenForUpdates() {
                   !sortedCurrentGuests.every((guest, index) => guest === sortedIncomingGuests[index])) {
                 
                 // DATA VALIDATION: Don't overwrite correct data with wrong data
-                // If current data has meaningful guest assignments and incoming is empty/wrong, keep current
+                // Check if current data has meaningful guest assignments
                 const currentHasRealGuests = sortedCurrentGuests.length > 0 && 
                   sortedCurrentGuests.some(guest => guest && guest.trim() !== '');
                 const incomingHasRealGuests = sortedIncomingGuests.length > 0 && 
                   sortedIncomingGuests.some(guest => guest && guest.trim() !== '');
+                
+                // ADVANCED VALIDATION: Check for specific known correct vs wrong guest sets
+                const correctGuestSet = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'].sort();
+                const wrongGuestSet = ['Matthew Molnar', 'Sophie Osborne', 'Shamaurie Cunningham', 'Ameera Khan', 'Harry May', 'Callum Day', 'Ross Phelps', 'Ronnie Morgan'].sort();
+                
+                // If current has correct guests and incoming has wrong guests, keep current
+                const currentHasCorrectGuests = JSON.stringify(sortedCurrentGuests) === JSON.stringify(correctGuestSet);
+                const incomingHasWrongGuests = JSON.stringify(sortedIncomingGuests) === JSON.stringify(wrongGuestSet);
+                
+                if (currentHasCorrectGuests && incomingHasWrongGuests) {
+                  console.log(`BLOCKING WRONG DATA: Keeping correct guests for table ${tableId}`);
+                  console.log('Current (correct):', sortedCurrentGuests);
+                  console.log('Incoming (wrong):', sortedIncomingGuests);
+                  continue; // Skip this table update
+                }
                 
                 // If current has real guests and incoming doesn't, or if current has more guests, keep current
                 if (currentHasRealGuests && (!incomingHasRealGuests || sortedCurrentGuests.length > sortedIncomingGuests.length)) {
@@ -334,4 +349,93 @@ function forcePushCorrectData() {
 }
 
 // Make forcePushCorrectData available globally
-window.forcePushCorrectData = forcePushCorrectData; 
+window.forcePushCorrectData = forcePushCorrectData;
+
+// Debug function to check all table guest assignments
+function debugTableAssignments() {
+  if (!isCollaborating) return;
+  
+  console.log('=== DEBUGGING TABLE ASSIGNMENTS ===');
+  
+  database.ref('seatingPlan').once('value').then((snapshot) => {
+    const firebaseData = snapshot.val();
+    const localData = getState();
+    
+    console.log('Firebase data:', firebaseData);
+    console.log('Local data:', localData);
+    
+    if (firebaseData && firebaseData.tables) {
+      console.log('=== FIREBASE TABLE ASSIGNMENTS ===');
+      for (const tableId in firebaseData.tables) {
+        const table = firebaseData.tables[tableId];
+        const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+        console.log(`Table ${tableId} (${table.name}):`, guests);
+      }
+    }
+    
+    if (localData && localData.tables) {
+      console.log('=== LOCAL TABLE ASSIGNMENTS ===');
+      for (const tableId in localData.tables) {
+        const table = localData.tables[tableId];
+        const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+        console.log(`Table ${tableId} (${table.name}):`, guests);
+      }
+    }
+  });
+}
+
+// Make debug function available globally
+window.debugTableAssignments = debugTableAssignments;
+
+// Force override specific table with correct data
+function forceOverrideHeadTable() {
+  if (!isCollaborating) return;
+  
+  const currentState = getState();
+  console.log('Force overriding Head Table with correct guest assignments...');
+  
+  // Find the Head Table and ensure it has correct guests
+  for (const tableId in currentState.tables) {
+    const table = currentState.tables[tableId];
+    if (table.name === 'Head Table - Long Way') {
+      // Set correct guest assignments
+      const correctGuests = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'];
+      
+      // Clear existing assignments
+      table.seats.forEach(seat => {
+        seat.guest = null;
+      });
+      
+      // Assign correct guests
+      correctGuests.forEach((guest, index) => {
+        if (table.seats[index]) {
+          table.seats[index].guest = guest;
+        }
+      });
+      
+      console.log('Head Table updated with correct guests:', correctGuests);
+      break;
+    }
+  }
+  
+  // Save to Firebase immediately
+  database.ref('seatingPlan').set({
+    ...currentState,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: currentUserId,
+    forceOverride: true
+  }).then(() => {
+    console.log('Head Table force-overridden in Firebase');
+    lastSavedState = JSON.stringify(currentState);
+    
+    // Update displays
+    updateCounts();
+    updateAssignedGuestsDisplay();
+    updateAllGuestDisplays();
+  }).catch((error) => {
+    console.error('Error force-overriding Head Table:', error);
+  });
+}
+
+// Make force override function available globally
+window.forceOverrideHeadTable = forceOverrideHeadTable; 
