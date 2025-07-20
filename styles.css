@@ -2190,6 +2190,25 @@ h1, h2, h5 {
     padding: 12px;
   }
   
+  /* Long rectangle table styling (Last Supper style) */
+  .table.card[data-table-type="rectangle-long"] {
+    min-width: 620px; /* Ensure it's wide enough */
+  }
+  
+  .table.card[data-table-type="rectangle-long"] .card-body {
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+  }
+  
+  .table.card[data-table-type="rectangle-long"] .seat {
+    background-color: #28a745;
+    border: 2px solid #1e7e34;
+  }
+  
+  .table.card[data-table-type="rectangle-long"] .seat.filled {
+    background-color: #007bff;
+    border-color: #0056b3;
+  }
+  
   .table.card .header-controls {
     display: flex;
     gap: 6px;

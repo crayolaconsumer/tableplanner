@@ -104,6 +104,7 @@
                <select class="form-select" id="tableType">
                  <option value="circle">Circle</option>
                  <option value="rectangle">Rectangle</option>
+                 <option value="rectangle-long">Rectangle (Long)</option>
                </select>
              </div>
              <div class="mb-3">
@@ -2014,6 +2015,46 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       createTableContainer(tableId, tableName, tableBody, width, height, "rectangle", seatCount, leftPos, topPos);
     }
     
+    function createLongRectangleTable(tableId, tableName, seatCount, imported = false, leftPos, topPos) {
+      const width = 600, height = 120; // Much longer and shorter for Last Supper style
+      const tableBody = document.createElement('div');
+      tableBody.className = 'card-body table-body';
+      tableBody.style.position = 'relative';
+      tableBody.style.width = width + 'px';
+      tableBody.style.height = height + 'px';
+      tableBody.style.border = '2px solid #333';
+      tableBody.style.borderRadius = '5px';
+      tableBody.style.margin = '0px';
+      tableBody.style.boxSizing = 'border-box';
+      
+      // For long rectangle tables, place all seats on one side (top edge)
+      const seatSpacing = width / (seatCount + 1); // +1 to avoid edges
+      
+      // Create exactly the requested number of seats
+      for (let i = 0; i < seatCount; i++) {
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        
+        // Calculate position along the top edge
+        const x = seatSpacing * (i + 1); // +1 to start after the first spacing
+        const y = 0; // All seats on the top edge
+        
+        seat.style.left = (x - 20) + 'px';
+        seat.style.top = (y - 20) + 'px';
+        
+        seat.addEventListener('dragover', window.dragDropModule.handleDragOver);
+        seat.addEventListener('dragleave', window.dragDropModule.handleDragLeave);
+        seat.addEventListener('drop', window.dragDropModule.handleDrop);
+        seat.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openAssignmentModal(seat);
+        });
+        tableBody.appendChild(seat);
+      }
+      
+      createTableContainer(tableId, tableName, tableBody, width, height, "rectangle-long", seatCount, leftPos, topPos);
+    }
+    
     function makeTableDraggable(tableElem) {
       const header = tableElem.querySelector('.table-header');
       header.style.cursor = 'move';
@@ -2121,6 +2162,41 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
           
           seat.style.left = (x - 20) + 'px';
           seat.style.top  = (y - 20) + 'px';
+          
+          seat.addEventListener('dragover', window.dragDropModule.handleDragOver);
+          seat.addEventListener('dragleave', window.dragDropModule.handleDragLeave);
+          seat.addEventListener('drop', window.dragDropModule.handleDrop);
+          seat.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openAssignmentModal(seat);
+          });
+          newBody.appendChild(seat);
+        }
+      } else if (tableType === "rectangle-long") {
+        newBody = document.createElement('div');
+        newBody.className = 'card-body table-body';
+        newBody.style.position = 'relative';
+        newBody.style.width = width + 'px';
+        newBody.style.height = height + 'px';
+        newBody.style.border = '2px solid #333';
+        newBody.style.borderRadius = '5px';
+        newBody.style.margin = '0px';
+        newBody.style.boxSizing = 'border-box';
+        
+        // For long rectangle tables, place all seats on one side (top edge)
+        const seatSpacing = width / (newSeatCount + 1); // +1 to avoid edges
+        
+        // Create exactly the requested number of seats
+        for (let i = 0; i < newSeatCount; i++) {
+          const seat = document.createElement('div');
+          seat.className = 'seat';
+          
+          // Calculate position along the top edge
+          const x = seatSpacing * (i + 1); // +1 to start after the first spacing
+          const y = 0; // All seats on the top edge
+          
+          seat.style.left = (x - 20) + 'px';
+          seat.style.top = (y - 20) + 'px';
           
           seat.addEventListener('dragover', window.dragDropModule.handleDragOver);
           seat.addEventListener('dragleave', window.dragDropModule.handleDragLeave);
@@ -2683,6 +2759,8 @@ unassignedElements.forEach(person => {
       const tableId = 'table-' + Date.now();
       if (tableType === 'circle') {
         createCircleTable(tableId, tableName, seatCount);
+      } else if (tableType === 'rectangle-long') {
+        createLongRectangleTable(tableId, tableName, seatCount);
       } else {
         createRectangleTable(tableId, tableName, seatCount);
       }
