@@ -1542,7 +1542,8 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       tableTouchDragging = false;
       tableTouchElement = this;
       
-      e.preventDefault();
+      // Don't prevent default immediately - let scrolling work
+      // e.preventDefault();
     }
     
     function handleTableTouchMove(e) {
@@ -1551,7 +1552,8 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       const touch = e.touches[0];
       const deltaY = Math.abs(touch.clientY - tableTouchStartY);
       
-      if (!tableTouchDragging && deltaY > 15) {
+      // Increased threshold to 40px for better scrolling vs dragging distinction
+      if (!tableTouchDragging && deltaY > 40) {
         tableTouchDragging = true;
         tableTouchElement.classList.add('dragging');
         tableTouchElement.style.opacity = '0.7';
@@ -1631,7 +1633,8 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       guestTouchDragging = false;
       guestTouchElement = this;
       
-      e.preventDefault();
+      // Don't prevent default immediately - let scrolling work
+      // e.preventDefault();
     }
     
     function handleGuestTouchMove(e) {
@@ -1640,7 +1643,8 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       const touch = e.touches[0];
       const deltaY = Math.abs(touch.clientY - guestTouchStartY);
       
-      if (!guestTouchDragging && deltaY > 10) {
+      // Increased threshold to 30px for better scrolling vs dragging distinction
+      if (!guestTouchDragging && deltaY > 30) {
         guestTouchDragging = true;
         guestTouchElement.classList.add('dragging');
         guestTouchElement.style.opacity = '0.7';

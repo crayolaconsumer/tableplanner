@@ -1940,11 +1940,27 @@ h1, h2, h5 {
     -webkit-overflow-scrolling: touch;
   }
   
-  /* Ensure guest items don't interfere with scrolling */
+  /* Ensure guest items don't interfere with scrolling by default */
   .guest-item {
     touch-action: pan-y;
     user-select: none;
     -webkit-user-select: none;
+  }
+  
+  /* Only enable dragging when explicitly dragging */
+  .guest-item.dragging {
+    touch-action: none;
+    z-index: 1000;
+  }
+  
+  /* Drag handles should always allow dragging */
+  .drag-handle-guest {
+    touch-action: manipulation;
+    cursor: grab;
+  }
+  
+  .drag-handle-guest:active {
+    cursor: grabbing;
   }
   
   /* Enable scrolling for the assigned guests container */
@@ -1952,6 +1968,46 @@ h1, h2, h5 {
     touch-action: pan-y;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Table assignment headers should allow dragging */
+  .table-assignment-header {
+    touch-action: pan-y;
+  }
+  
+  /* Only enable dragging when explicitly dragging */
+  .table-assignment.dragging {
+    touch-action: none;
+    z-index: 1000;
+  }
+  
+  /* Drag handles for tables */
+  .drag-handle {
+    touch-action: manipulation;
+    cursor: grab;
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+  
+  /* Visual feedback for drag handles */
+  .drag-handle,
+  .drag-handle-guest {
+    color: #6c757d;
+    transition: color 0.2s ease;
+  }
+  
+  .drag-handle:hover,
+  .drag-handle-guest:hover {
+    color: #007bff;
+  }
+  
+  /* Better visual feedback when dragging */
+  .guest-item.dragging,
+  .table-assignment.dragging {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
   }
   
   /* Reduce padding between mobile controls and buttons */
