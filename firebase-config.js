@@ -74,11 +74,13 @@ function loadFromFirebase() {
   
   database.ref('seatingPlan').once('value').then((snapshot) => {
     const data = snapshot.val();
-    if (data && data.tables) {
-      // Remove Firebase-specific fields before importing
+    if (data && data.tables && Object.keys(data.tables).length > 0) {
+      // Only load if there's meaningful data in Firebase
       const { lastUpdated, updatedBy, ...cleanData } = data;
       importState(JSON.stringify(cleanData));
       console.log('State loaded from Firebase');
+    } else {
+      console.log('Firebase is empty, keeping current state');
     }
   }).catch((error) => {
     console.error('Error loading from Firebase:', error);
