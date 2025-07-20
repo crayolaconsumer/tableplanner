@@ -1019,28 +1019,27 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             `;
             
             // Make assigned guests draggable for reordering and moving to unassigned
-            guestItem.draggable = false; // Disable general dragging
+            guestItem.draggable = true;
             guestItem.dataset.guestName = guest.name;
             guestItem.dataset.seatIndex = guest.seatIndex;
             guestItem.dataset.tableName = tableData.name;
             guestItem.dataset.personId = guest.personElement.id;
             
-            // Add drag and drop event listeners to drag handle only
-            const dragHandle = guestItem.querySelector('.drag-handle-guest');
-            if (dragHandle) {
-              dragHandle.draggable = true;
-              dragHandle.addEventListener('dragstart', handleGuestDragStart);
-              dragHandle.addEventListener('dragend', handleGuestDragEnd);
-              dragHandle.addEventListener('touchstart', handleGuestTouchStart, { passive: false });
-              dragHandle.addEventListener('touchmove', handleGuestTouchMove, { passive: false });
-              dragHandle.addEventListener('touchend', handleGuestTouchEnd, { passive: false });
-            }
-            
-            // Add drop zone listeners to the guest item
+            // Add drag and drop event listeners
+            guestItem.addEventListener('dragstart', handleGuestDragStart);
+            guestItem.addEventListener('dragend', handleGuestDragEnd);
             guestItem.addEventListener('dragover', handleGuestDragOver);
             guestItem.addEventListener('dragenter', handleGuestDragEnter);
             guestItem.addEventListener('dragleave', handleGuestDragLeave);
             guestItem.addEventListener('drop', handleGuestDrop);
+            
+            // Add touch support for guest reordering (only on drag handle)
+            const dragHandle = guestItem.querySelector('.drag-handle-guest');
+            if (dragHandle) {
+              dragHandle.addEventListener('touchstart', handleGuestTouchStart, { passive: true });
+              dragHandle.addEventListener('touchmove', handleGuestTouchMove, { passive: true });
+              dragHandle.addEventListener('touchend', handleGuestTouchEnd, { passive: true });
+            }
             
             // Add hover highlighting for assigned guests
             const guestNameSpan = guestItem.querySelector('.guest-name');
@@ -1277,9 +1276,6 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             return;
           }
           
-          // Prevent default to avoid double-triggering with click
-          e.preventDefault();
-          
           content.classList.toggle('expanded');
           header.classList.toggle('expanded');
           
@@ -1323,9 +1319,9 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
         tableDiv.addEventListener('drop', handleTableDrop);
         
         // Add touch support for table reordering
-        tableDiv.addEventListener('touchstart', handleTableTouchStart, { passive: false });
-        tableDiv.addEventListener('touchmove', handleTableTouchMove, { passive: false });
-        tableDiv.addEventListener('touchend', handleTableTouchEnd, { passive: false });
+        tableDiv.addEventListener('touchstart', handleTableTouchStart, { passive: true });
+        tableDiv.addEventListener('touchmove', handleTableTouchMove, { passive: true });
+        tableDiv.addEventListener('touchend', handleTableTouchEnd, { passive: true });
         
         tableDiv.appendChild(header);
         tableDiv.appendChild(content);
@@ -1577,9 +1573,6 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       tableTouchStartY = touch.clientY;
       tableTouchDragging = false;
       tableTouchElement = this;
-      
-      // Don't prevent default immediately - let scrolling work
-      // e.preventDefault();
     }
     
     function handleTableTouchMove(e) {
@@ -1597,8 +1590,6 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       }
       
       if (tableTouchDragging) {
-        e.preventDefault();
-        
         // Find the element under the touch point
         const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
         const targetTableDiv = elementUnderTouch?.closest('.table-assignment');
@@ -1667,10 +1658,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       const touch = e.touches[0];
       guestTouchStartY = touch.clientY;
       guestTouchDragging = false;
-      guestTouchElement = this;
-      
-      // Don't prevent default immediately - let scrolling work
-      // e.preventDefault();
+      guestTouchElement = this.closest('.guest-item'); // Get the guest item, not the handle
     }
     
     function handleGuestTouchMove(e) {
@@ -1688,8 +1676,6 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       }
       
       if (guestTouchDragging) {
-        e.preventDefault();
-        
         // Find the element under the touch point
         const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
         const targetGuestItem = elementUnderTouch?.closest('.guest-item');
