@@ -163,6 +163,22 @@ function listenForUpdates() {
               // Only update if guest assignments are significantly different
               if (sortedCurrentGuests.length !== sortedIncomingGuests.length || 
                   !sortedCurrentGuests.every((guest, index) => guest === sortedIncomingGuests[index])) {
+                
+                // DATA VALIDATION: Don't overwrite correct data with wrong data
+                // If current data has meaningful guest assignments and incoming is empty/wrong, keep current
+                const currentHasRealGuests = sortedCurrentGuests.length > 0 && 
+                  sortedCurrentGuests.some(guest => guest && guest.trim() !== '');
+                const incomingHasRealGuests = sortedIncomingGuests.length > 0 && 
+                  sortedIncomingGuests.some(guest => guest && guest.trim() !== '');
+                
+                // If current has real guests and incoming doesn't, or if current has more guests, keep current
+                if (currentHasRealGuests && (!incomingHasRealGuests || sortedCurrentGuests.length > sortedIncomingGuests.length)) {
+                  console.log(`Keeping current guest assignments for table ${tableId} - current data is more complete`);
+                  console.log('Current guests:', sortedCurrentGuests);
+                  console.log('Incoming guests:', sortedIncomingGuests);
+                  continue; // Skip this table update
+                }
+                
                 mergedData.tables[tableId] = incomingTable;
                 shouldUpdate = true;
                 console.log(`Updating table ${tableId} - guest assignments changed`);
@@ -177,6 +193,15 @@ function listenForUpdates() {
         const now = Date.now();
         if (shouldUpdate && (now - lastUpdateTime) > 1000) { // Reduced to 1 second cooldown for faster sync
           lastUpdateTime = now;
+          
+          // TIMESTAMP VALIDATION: Only accept updates that are newer than our last save
+          if (data.lastUpdated && lastSavedState) {
+            const lastSavedTime = JSON.parse(lastSavedState).lastUpdated || 0;
+            if (data.lastUpdated <= lastSavedTime) {
+              console.log('Ignoring older update - our data is more recent');
+              return;
+            }
+          }
           
           // Set flag to prevent saving during update
           isUpdatingFromFirebase = true;
@@ -285,4 +310,28 @@ function forceSyncGuestAssignments() {
 }
 
 // Make forceSyncGuestAssignments available globally
-window.forceSyncGuestAssignments = forceSyncGuestAssignments; 
+window.forceSyncGuestAssignments = forceSyncGuestAssignments;
+
+// Force push correct data to override wrong data
+function forcePushCorrectData() {
+  if (!isCollaborating) return;
+  
+  const currentState = getState();
+  console.log('Force pushing correct data to override wrong data...');
+  
+  // Save current state with high priority timestamp
+  database.ref('seatingPlan').set({
+    ...currentState,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: currentUserId,
+    forceOverride: true // Flag to indicate this is authoritative data
+  }).then(() => {
+    console.log('Correct data force-pushed to Firebase');
+    lastSavedState = JSON.stringify(currentState);
+  }).catch((error) => {
+    console.error('Error force-pushing data:', error);
+  });
+}
+
+// Make forcePushCorrectData available globally
+window.forcePushCorrectData = forcePushCorrectData; 

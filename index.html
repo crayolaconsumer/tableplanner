@@ -3034,15 +3034,15 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Use force sync to ensure correct guest assignments
-        forceSyncGuestAssignments();
+        // Use force push to override wrong data with correct data
+        forcePushCorrectData();
         
         // Force refresh all displays
         updateCounts();
         updateAssignedGuestsDisplay();
         updateAllGuestDisplays();
         
-        showCollaborationMessage('Force sync completed! Guest assignments updated.', 'success');
+        showCollaborationMessage('Correct data force-pushed! Overriding wrong assignments.', 'success');
       }
     });
     
