@@ -2978,7 +2978,7 @@ unassignedElements.forEach(person => {
       }, 5000);
     }
     
-    // Auto-save to Firebase when changes are made (conservative)
+    // Comprehensive auto-save to Firebase for all changes
     function autoSaveToFirebase() {
       if (isCollaborating && !isUpdatingFromFirebase) {
         const state = getState();
@@ -2986,40 +2986,90 @@ unassignedElements.forEach(person => {
       }
     }
     
-    // Hook into existing functions to auto-save (conservative)
+    // Debounced auto-save to prevent rapid-fire updates
+    let autoSaveTimeout = null;
+    function debouncedAutoSave() {
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+      autoSaveTimeout = setTimeout(autoSaveToFirebase, 300);
+    }
+    
+    // Hook into ALL existing functions for comprehensive sync
     const originalUpdateCounts = updateCounts;
     updateCounts = function() {
       originalUpdateCounts();
-      // Don't auto-save on every count update
+      debouncedAutoSave(); // Auto-save on any count changes
     };
     
-    // Hook into guest assignment (major change)
+    // Hook into guest assignment
     const originalAssignPersonToSeat = assignPersonToSeat;
     assignPersonToSeat = function(person, seat) {
       originalAssignPersonToSeat(person, seat);
-      // Save immediately for guest assignments
-      setTimeout(autoSaveToFirebase, 200);
+      debouncedAutoSave();
     };
     
-    // Hook into table creation (major change)
+    // Hook into table creation
     const originalCreateTableContainer = createTableContainer;
     createTableContainer = function(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos) {
       originalCreateTableContainer(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos);
-      setTimeout(autoSaveToFirebase, 1000);
+      debouncedAutoSave();
     };
     
-    // Hook into guest removal (major change)
+    // Hook into guest removal
     const originalClearSeatAssignment = clearSeatAssignment;
     clearSeatAssignment = function() {
       originalClearSeatAssignment();
-      setTimeout(autoSaveToFirebase, 500);
+      debouncedAutoSave();
     };
     
-    // Hook into random assignment (major change)
+    // Hook into random assignment
     const originalRandomAssign = randomAssign;
     randomAssign = function() {
       originalRandomAssign();
-      setTimeout(autoSaveToFirebase, 1000);
+      debouncedAutoSave();
+    };
+    
+    // Hook into table removal
+    const originalRemoveTable = removeTable;
+    removeTable = function() {
+      originalRemoveTable();
+      debouncedAutoSave();
+    };
+    
+    // Hook into table renaming
+    const originalRenameTable = renameTable;
+    renameTable = function() {
+      originalRenameTable();
+      debouncedAutoSave();
+    };
+    
+    // Hook into seat count changes
+    const originalEditSeats = editSeats;
+    editSeats = function() {
+      originalEditSeats();
+      debouncedAutoSave();
+    };
+    
+    // Hook into table movement
+    const originalMoveTable = moveTable;
+    moveTable = function() {
+      originalMoveTable();
+      debouncedAutoSave();
+    };
+    
+    // Hook into CSV import
+    const originalParseGuestCSV = parseGuestCSV;
+    parseGuestCSV = function(text) {
+      originalParseGuestCSV(text);
+      debouncedAutoSave();
+    };
+    
+    // Hook into state import
+    const originalImportState = importState;
+    importState = function(jsonData) {
+      originalImportState(jsonData);
+      debouncedAutoSave();
     };
     
     // Show online users count
@@ -3043,13 +3093,70 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Use force correct sync with high priority
-        forceCorrectSync();
+        // Force immediate sync of current state
+        console.log('Manual sync triggered');
+        autoSaveToFirebase();
+        showCollaborationMessage('Manual sync completed!', 'success');
       }
     });
     
     // Update online users display every 10 seconds
     setInterval(updateOnlineUsersDisplay, 10000);
+    
+    // Add event listeners for table operations that need real-time sync
+    document.addEventListener('DOMContentLoaded', function() {
+      // Listen for table name changes
+      document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('table-name-input') || e.target.classList.contains('table-title-input')) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Listen for table seat count changes
+      document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('seat-count-input')) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Listen for table drag and drop
+      document.addEventListener('dragend', function(e) {
+        if (e.target.classList.contains('table-container') || e.target.closest('.table-container')) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Listen for any DOM changes that might indicate table modifications
+      const observer = new MutationObserver(function(mutations) {
+        let shouldSave = false;
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList' || mutation.type === 'attributes') {
+            // Check if changes are related to tables or guests
+            if (mutation.target.classList && 
+                (mutation.target.classList.contains('table-container') || 
+                 mutation.target.classList.contains('table') ||
+                 mutation.target.classList.contains('person') ||
+                 mutation.target.classList.contains('seat'))) {
+              shouldSave = true;
+            }
+          }
+        });
+        if (shouldSave) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Start observing the canvas for changes
+      const canvas = document.getElementById('canvas');
+      if (canvas) {
+        observer.observe(canvas, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'style', 'data-seat-count']
+        });
+      }
+    });
     
   </script>
 </body>
