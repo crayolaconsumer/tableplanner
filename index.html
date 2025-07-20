@@ -3030,47 +3030,23 @@ unassignedElements.forEach(person => {
       debouncedAutoSave();
     };
     
-    // Hook into table removal
-    const originalRemoveTable = removeTable;
-    removeTable = function() {
-      originalRemoveTable();
-      debouncedAutoSave();
-    };
+    // Hook into CSV import (if function exists)
+    if (typeof parseGuestCSV !== 'undefined') {
+      const originalParseGuestCSV = parseGuestCSV;
+      parseGuestCSV = function(text) {
+        originalParseGuestCSV(text);
+        debouncedAutoSave();
+      };
+    }
     
-    // Hook into table renaming
-    const originalRenameTable = renameTable;
-    renameTable = function() {
-      originalRenameTable();
-      debouncedAutoSave();
-    };
-    
-    // Hook into seat count changes
-    const originalEditSeats = editSeats;
-    editSeats = function() {
-      originalEditSeats();
-      debouncedAutoSave();
-    };
-    
-    // Hook into table movement
-    const originalMoveTable = moveTable;
-    moveTable = function() {
-      originalMoveTable();
-      debouncedAutoSave();
-    };
-    
-    // Hook into CSV import
-    const originalParseGuestCSV = parseGuestCSV;
-    parseGuestCSV = function(text) {
-      originalParseGuestCSV(text);
-      debouncedAutoSave();
-    };
-    
-    // Hook into state import
-    const originalImportState = importState;
-    importState = function(jsonData) {
-      originalImportState(jsonData);
-      debouncedAutoSave();
-    };
+    // Hook into state import (if function exists)
+    if (typeof importState !== 'undefined') {
+      const originalImportState = importState;
+      importState = function(jsonData) {
+        originalImportState(jsonData);
+        debouncedAutoSave();
+      };
+    }
     
     // Show online users count
     function updateOnlineUsersDisplay() {
@@ -3122,6 +3098,24 @@ unassignedElements.forEach(person => {
       // Listen for table drag and drop
       document.addEventListener('dragend', function(e) {
         if (e.target.classList.contains('table-container') || e.target.closest('.table-container')) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Listen for table button clicks (rename, edit seats, remove)
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn') && 
+            (e.target.textContent.includes('Rename') || 
+             e.target.textContent.includes('Edit Seats') || 
+             e.target.textContent.includes('Remove'))) {
+          debouncedAutoSave();
+        }
+      });
+      
+      // Listen for modal saves (table editing)
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-primary') && 
+            e.target.textContent.includes('Save')) {
           debouncedAutoSave();
         }
       });
