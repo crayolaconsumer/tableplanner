@@ -84,7 +84,7 @@ function saveToFirebase(state) {
     }).catch((error) => {
       console.error('Error saving to Firebase:', error);
     });
-  }, 2000); // Wait 2 seconds before saving - more conservative
+  }, 1000); // Wait 1 second before saving - faster sync
 }
 
 // Load state from Firebase
@@ -120,7 +120,7 @@ function listenForUpdates() {
         // Get current state
         const currentState = getState();
         
-        // Smart merge: only update tables that have more complete data
+        // Smart merge: update when data is actually different
         let shouldUpdate = false;
         let mergedData = { ...currentState };
         
@@ -129,13 +129,24 @@ function listenForUpdates() {
           const incomingTable = cleanData.tables[tableId];
           const currentTable = currentState.tables[tableId];
           
-          // If we don't have this table, or incoming table has more guests, use it
-          if (!currentTable || 
-              (incomingTable.seats && currentTable.seats && 
-               Object.keys(incomingTable.seats).length > Object.keys(currentTable.seats).length)) {
+          // Compare the actual data, not just guest count
+          const incomingTableString = JSON.stringify(incomingTable);
+          const currentTableString = JSON.stringify(currentTable);
+          
+          if (incomingTableString !== currentTableString) {
             mergedData.tables[tableId] = incomingTable;
             shouldUpdate = true;
-            console.log(`Updating table ${tableId} with more complete data`);
+            console.log(`Updating table ${tableId} - data changed`);
+          }
+        }
+        
+        // Also check for tables that exist in current but not in incoming
+        for (const tableId in currentState.tables) {
+          if (!cleanData.tables[tableId]) {
+            // Table was deleted in the other window
+            delete mergedData.tables[tableId];
+            shouldUpdate = true;
+            console.log(`Removing table ${tableId} - deleted in other window`);
           }
         }
         
@@ -158,6 +169,8 @@ function listenForUpdates() {
               isUpdatingFromFirebase = false;
             }, 1000);
           }
+        } else {
+          console.log('No changes detected in incoming data');
         }
       }
     }

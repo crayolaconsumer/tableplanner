@@ -2977,8 +2977,8 @@ unassignedElements.forEach(person => {
     const originalAssignPersonToSeat = assignPersonToSeat;
     assignPersonToSeat = function(person, seat) {
       originalAssignPersonToSeat(person, seat);
-      // Delay save to let user finish their action
-      setTimeout(autoSaveToFirebase, 500);
+      // Save immediately for guest assignments
+      setTimeout(autoSaveToFirebase, 200);
     };
     
     // Hook into table creation (major change)
