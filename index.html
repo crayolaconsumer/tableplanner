@@ -655,11 +655,17 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
         
         // Update assigned guests display if this guest is assigned to a table
         updateAssignedGuestsDisplay();
+        
+        // Auto-save to Firebase for guest editing
+        setTimeout(autoSaveToFirebase, 200);
       } else {
         // Create new guest
         addPerson(guestInfo);
         // Update assigned guests display in case this guest gets assigned
         updateAssignedGuestsDisplay();
+        
+        // Auto-save to Firebase for new guest
+        setTimeout(autoSaveToFirebase, 200);
       }
       
       // Close modal
@@ -1194,6 +1200,9 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
                       seats[guest.seatIndex - 1].removeAttribute('data-tooltip');
                       seats[guest.seatIndex - 1].removeAttribute('title');
                       updateCounts();
+                      
+                      // Auto-save to Firebase for guest removal from table
+                      setTimeout(autoSaveToFirebase, 200);
                     }
                   }
                 });
