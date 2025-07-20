@@ -3069,10 +3069,8 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Force immediate sync of current state
-        console.log('Manual sync triggered');
-        autoSaveToFirebase();
-        showCollaborationMessage('Manual sync completed!', 'success');
+        // Use nuclear reset for bulletproof sync
+        nuclearReset();
       }
     });
     

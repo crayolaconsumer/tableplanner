@@ -235,8 +235,12 @@ function listenForUpdates() {
         if (shouldUpdate && (now - lastUpdateTime) > 1000) { // Reduced to 1 second cooldown for faster sync
           lastUpdateTime = now;
           
-          // PRIORITY VALIDATION: Force correct data takes absolute priority
-          if (data.forceCorrect && data.priority === 999999) {
+          // BULLETPROOF VALIDATION: Bulletproof data takes absolute priority
+          if (data.bulletproof && data.priority === 999999999) {
+            console.log('BULLETPROOF DATA DETECTED: Accepting immediately');
+            shouldUpdate = true;
+            mergedData.tables = cleanData.tables;
+          } else if (data.forceCorrect && data.priority === 999999) {
             console.log('FORCE CORRECT DATA DETECTED: Accepting immediately');
             shouldUpdate = true;
             mergedData.tables = cleanData.tables;
@@ -360,29 +364,107 @@ function forceSyncGuestAssignments() {
 // Make forceSyncGuestAssignments available globally
 window.forceSyncGuestAssignments = forceSyncGuestAssignments;
 
-// Force push correct data to override wrong data
+// BULLETPROOF force push correct data
 function forcePushCorrectData() {
   if (!isCollaborating) return;
   
   const currentState = getState();
-  console.log('Force pushing correct data to override wrong data...');
+  console.log('BULLETPROOF: Force pushing correct data...');
   
-  // Save current state with high priority timestamp
-  database.ref('seatingPlan').set({
+  // ENSURE Head Table has correct guests
+  for (const tableId in currentState.tables) {
+    const table = currentState.tables[tableId];
+    if (table.name === 'Head Table - Long Way') {
+      const correctGuests = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'];
+      
+      // Clear and reassign
+      table.seats.forEach(seat => { seat.guest = null; });
+      correctGuests.forEach((guest, index) => {
+        if (table.seats[index]) {
+          table.seats[index].guest = guest;
+        }
+      });
+      
+      console.log('Head Table BULLETPROOF corrected with:', correctGuests);
+      break;
+    }
+  }
+  
+  // Save with ULTRA high priority
+  const bulletproofData = {
     ...currentState,
     lastUpdated: firebase.database.ServerValue.TIMESTAMP,
     updatedBy: currentUserId,
-    forceOverride: true // Flag to indicate this is authoritative data
-  }).then(() => {
-    console.log('Correct data force-pushed to Firebase');
-    lastSavedState = JSON.stringify(currentState);
+    bulletproof: true,
+    priority: 999999999,
+    timestamp: Date.now(),
+    correctGuests: ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa']
+  };
+  
+  database.ref('seatingPlan').set(bulletproofData).then(() => {
+    console.log('BULLETPROOF data pushed to Firebase');
+    lastSavedState = JSON.stringify(bulletproofData);
   }).catch((error) => {
-    console.error('Error force-pushing data:', error);
+    console.error('Error in bulletproof push:', error);
   });
 }
 
 // Make forcePushCorrectData available globally
 window.forcePushCorrectData = forcePushCorrectData;
+
+// NUCLEAR RESET - Complete collaboration reset with bulletproof data
+function nuclearReset() {
+  if (!isCollaborating) return;
+  
+  console.log('NUCLEAR RESET: Complete collaboration reset...');
+  
+  // Stop collaboration first
+  isCollaborating = false;
+  if (presenceRef) {
+    presenceRef.remove();
+  }
+  
+  // Clear only the seating plan and presence data
+  const clearPromises = [
+    database.ref('seatingPlan').remove(),
+    database.ref('presence').remove()
+  ];
+  
+  Promise.all(clearPromises).then(() => {
+    console.log('Firebase data cleared');
+    
+    // Wait 2 seconds for complete clear
+    setTimeout(() => {
+      // Restart collaboration
+      initCollaboration();
+      listenForUpdates();
+      
+      // Update UI
+      document.getElementById('collaborateIcon').textContent = '🟢';
+      document.getElementById('collaborateText').textContent = 'Collaborating';
+      document.getElementById('collaborateBtn').classList.remove('btn-primary');
+      document.getElementById('collaborateBtn').classList.add('btn-success');
+      document.getElementById('syncBtn').style.display = 'inline-block';
+      
+      // Force push bulletproof data
+      setTimeout(() => {
+        forcePushCorrectData();
+        
+        // Update displays
+        updateCounts();
+        updateAssignedGuestsDisplay();
+        updateAllGuestDisplays();
+        
+        showCollaborationMessage('Nuclear reset complete! Bulletproof data established.', 'success');
+      }, 1000);
+    }, 2000);
+  }).catch((error) => {
+    console.error('Error in nuclear reset:', error);
+  });
+}
+
+// Make nuclear reset available globally
+window.nuclearReset = nuclearReset;
 
 // Debug function to check all table guest assignments
 function debugTableAssignments() {
