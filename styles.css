@@ -1973,6 +1973,27 @@ h1, h2, h5 {
   /* Table assignment headers should allow dragging */
   .table-assignment-header {
     touch-action: pan-y;
+    cursor: pointer;
+    position: relative;
+    min-height: 48px; /* Better touch target */
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Add visual indicator for expandable headers */
+  .table-assignment-header::after {
+    content: '▼';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #6c757d;
+    transition: transform 0.2s ease;
+  }
+  
+  .table-assignment-header.expanded::after {
+    transform: translateY(-50%) rotate(180deg);
   }
   
   /* Only enable dragging when explicitly dragging */

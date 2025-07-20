@@ -1260,13 +1260,21 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
         
         // Add touch handler for mobile expand/collapse
         header.addEventListener('touchend', function(e) {
-          // Don't expand/collapse if touching control buttons or if we were dragging
+          // Don't expand/collapse if touching control buttons
           if (e.target.classList.contains('remove-guest-btn') || 
               e.target.classList.contains('edit-guest-btn') ||
-              e.target.closest('.guest-controls') ||
-              tableTouchDragging) {
+              e.target.closest('.guest-controls')) {
             return;
           }
+          
+          // Check if we were dragging (only if we actually moved significantly)
+          if (tableTouchDragging && tableTouchElement === tableDiv) {
+            return;
+          }
+          
+          // Prevent default to avoid double-triggering with click
+          e.preventDefault();
+          
           content.classList.toggle('expanded');
           header.classList.toggle('expanded');
           
@@ -1275,6 +1283,29 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             expandedTables.add(tableData.name);
           } else {
             expandedTables.delete(tableData.name);
+          }
+        });
+        
+        // Add a separate click handler for mobile that works with touch
+        header.addEventListener('click', function(e) {
+          // Don't expand/collapse if clicking on control buttons
+          if (e.target.classList.contains('remove-guest-btn') || 
+              e.target.classList.contains('edit-guest-btn') ||
+              e.target.closest('.guest-controls')) {
+            return;
+          }
+          
+          // Only handle click if we weren't dragging
+          if (!tableTouchDragging) {
+            content.classList.toggle('expanded');
+            header.classList.toggle('expanded');
+            
+            // Store expanded state
+            if (content.classList.contains('expanded')) {
+              expandedTables.add(tableData.name);
+            } else {
+              expandedTables.delete(tableData.name);
+            }
           }
         });
         
