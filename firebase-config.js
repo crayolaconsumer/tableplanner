@@ -56,10 +56,11 @@ function initCollaboration() {
 // Debounce save operations to prevent feedback loops
 let saveTimeout = null;
 let lastSavedState = null;
+let isUpdatingFromFirebase = false; // Flag to prevent save loops
 
 // Save state to Firebase
 function saveToFirebase(state) {
-  if (!isCollaborating) return;
+  if (!isCollaborating || isUpdatingFromFirebase) return;
   
   // Debounce saves to prevent rapid-fire updates
   if (saveTimeout) {
@@ -83,7 +84,7 @@ function saveToFirebase(state) {
     }).catch((error) => {
       console.error('Error saving to Firebase:', error);
     });
-  }, 1000); // Wait 1 second before saving
+  }, 2000); // Wait 2 seconds before saving - more conservative
 }
 
 // Load state from Firebase
@@ -116,17 +117,47 @@ function listenForUpdates() {
       if (data.updatedBy !== currentUserId) {
         const { lastUpdated, updatedBy, ...cleanData } = data;
         
-        // Prevent feedback loops by checking if this is actually different
+        // Get current state
         const currentState = getState();
-        const newStateString = JSON.stringify(cleanData);
-        const currentStateString = JSON.stringify(currentState);
         
-        if (newStateString !== currentStateString) {
-          importState(newStateString);
-          console.log('Received real-time update from another user');
+        // Smart merge: only update tables that have more complete data
+        let shouldUpdate = false;
+        let mergedData = { ...currentState };
+        
+        // Check each table in the incoming data
+        for (const tableId in cleanData.tables) {
+          const incomingTable = cleanData.tables[tableId];
+          const currentTable = currentState.tables[tableId];
           
-          // Update our last saved state to prevent re-saving
-          lastSavedState = newStateString;
+          // If we don't have this table, or incoming table has more guests, use it
+          if (!currentTable || 
+              (incomingTable.seats && currentTable.seats && 
+               Object.keys(incomingTable.seats).length > Object.keys(currentTable.seats).length)) {
+            mergedData.tables[tableId] = incomingTable;
+            shouldUpdate = true;
+            console.log(`Updating table ${tableId} with more complete data`);
+          }
+        }
+        
+        // Only update if we have meaningful changes
+        if (shouldUpdate) {
+          // Set flag to prevent saving during update
+          isUpdatingFromFirebase = true;
+          
+          try {
+            importState(JSON.stringify(mergedData));
+            console.log('Received and merged real-time update from another user');
+            
+            // Update our last saved state to prevent re-saving
+            lastSavedState = JSON.stringify(mergedData);
+          } catch (error) {
+            console.error('Error applying update:', error);
+          } finally {
+            // Clear flag after update
+            setTimeout(() => {
+              isUpdatingFromFirebase = false;
+            }, 1000);
+          }
         }
       }
     }
