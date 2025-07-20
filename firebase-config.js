@@ -57,6 +57,7 @@ function initCollaboration() {
 let saveTimeout = null;
 let lastSavedState = null;
 let isUpdatingFromFirebase = false; // Flag to prevent save loops
+let lastUpdateTime = 0; // Track when we last received an update
 
 // Save state to Firebase
 function saveToFirebase(state) {
@@ -120,38 +121,51 @@ function listenForUpdates() {
         // Get current state
         const currentState = getState();
         
-        // Smart merge: update when data is actually different
+        // Smart merge: only update if there are meaningful differences
         let shouldUpdate = false;
         let mergedData = { ...currentState };
         
-        // Check each table in the incoming data
-        for (const tableId in cleanData.tables) {
-          const incomingTable = cleanData.tables[tableId];
-          const currentTable = currentState.tables[tableId];
-          
-          // Compare the actual data, not just guest count
-          const incomingTableString = JSON.stringify(incomingTable);
-          const currentTableString = JSON.stringify(currentTable);
-          
-          if (incomingTableString !== currentTableString) {
-            mergedData.tables[tableId] = incomingTable;
-            shouldUpdate = true;
-            console.log(`Updating table ${tableId} - data changed`);
+        // Check if the overall structure is significantly different
+        const currentTablesCount = Object.keys(currentState.tables).length;
+        const incomingTablesCount = Object.keys(cleanData.tables).length;
+        
+        // Only proceed if table counts are different or if we have new tables
+        if (currentTablesCount !== incomingTablesCount) {
+          shouldUpdate = true;
+          mergedData.tables = cleanData.tables;
+          console.log(`Updating all tables - count changed from ${currentTablesCount} to ${incomingTablesCount}`);
+        } else {
+          // Check each table for significant changes (not just minor differences)
+          for (const tableId in cleanData.tables) {
+            const incomingTable = cleanData.tables[tableId];
+            const currentTable = currentState.tables[tableId];
+            
+            if (!currentTable) {
+              // New table added
+              mergedData.tables[tableId] = incomingTable;
+              shouldUpdate = true;
+              console.log(`Adding new table ${tableId}`);
+            } else {
+              // Compare guest assignments (the important part)
+              const currentGuests = currentTable.seats?.map(s => s.guest).filter(g => g) || [];
+              const incomingGuests = incomingTable.seats?.map(s => s.guest).filter(g => g) || [];
+              
+              // Only update if guest assignments are significantly different
+              if (currentGuests.length !== incomingGuests.length || 
+                  !currentGuests.every((guest, index) => guest === incomingGuests[index])) {
+                mergedData.tables[tableId] = incomingTable;
+                shouldUpdate = true;
+                console.log(`Updating table ${tableId} - guest assignments changed`);
+              }
+            }
           }
         }
         
-        // Also check for tables that exist in current but not in incoming
-        for (const tableId in currentState.tables) {
-          if (!cleanData.tables[tableId]) {
-            // Table was deleted in the other window
-            delete mergedData.tables[tableId];
-            shouldUpdate = true;
-            console.log(`Removing table ${tableId} - deleted in other window`);
-          }
-        }
-        
-        // Only update if we have meaningful changes
-        if (shouldUpdate) {
+        // Only update if we have meaningful changes and enough time has passed
+        const now = Date.now();
+        if (shouldUpdate && (now - lastUpdateTime) > 2000) { // 2 second cooldown
+          lastUpdateTime = now;
+          
           // Set flag to prevent saving during update
           isUpdatingFromFirebase = true;
           
@@ -169,8 +183,10 @@ function listenForUpdates() {
               isUpdatingFromFirebase = false;
             }, 1000);
           }
+        } else if (shouldUpdate) {
+          console.log('Update skipped - too soon since last update');
         } else {
-          console.log('No changes detected in incoming data');
+          console.log('No meaningful changes detected in incoming data');
         }
       }
     }
