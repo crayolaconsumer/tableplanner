@@ -3024,15 +3024,15 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        const state = getState();
-        saveToFirebase(state);
+        // Use force sync to ensure correct guest assignments
+        forceSyncGuestAssignments();
         
         // Force refresh all displays
         updateCounts();
         updateAssignedGuestsDisplay();
         updateAllGuestDisplays();
         
-        showCollaborationMessage('Manual sync completed!', 'success');
+        showCollaborationMessage('Force sync completed! Guest assignments updated.', 'success');
       }
     });
     

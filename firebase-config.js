@@ -155,12 +155,18 @@ function listenForUpdates() {
               const currentGuests = currentTable.seats?.map(s => s.guest).filter(g => g) || [];
               const incomingGuests = incomingTable.seats?.map(s => s.guest).filter(g => g) || [];
               
+              // Sort both arrays for consistent comparison
+              const sortedCurrentGuests = [...currentGuests].sort();
+              const sortedIncomingGuests = [...incomingGuests].sort();
+              
               // Only update if guest assignments are significantly different
-              if (currentGuests.length !== incomingGuests.length || 
-                  !currentGuests.every((guest, index) => guest === incomingGuests[index])) {
+              if (sortedCurrentGuests.length !== sortedIncomingGuests.length || 
+                  !sortedCurrentGuests.every((guest, index) => guest === sortedIncomingGuests[index])) {
                 mergedData.tables[tableId] = incomingTable;
                 shouldUpdate = true;
                 console.log(`Updating table ${tableId} - guest assignments changed`);
+                console.log('Current guests:', sortedCurrentGuests);
+                console.log('Incoming guests:', sortedIncomingGuests);
               }
             }
           }
@@ -168,7 +174,7 @@ function listenForUpdates() {
         
         // Only update if we have meaningful changes and enough time has passed
         const now = Date.now();
-        if (shouldUpdate && (now - lastUpdateTime) > 2000) { // 2 second cooldown
+        if (shouldUpdate && (now - lastUpdateTime) > 1000) { // Reduced to 1 second cooldown for faster sync
           lastUpdateTime = now;
           
           // Set flag to prevent saving during update
@@ -252,4 +258,27 @@ function cleanupPresence() {
 setInterval(cleanupPresence, 60000);
 
 // Update presence every 30 seconds
-setInterval(updatePresence, 30000); 
+setInterval(updatePresence, 30000);
+
+// Force sync function to ensure correct guest assignments
+function forceSyncGuestAssignments() {
+  if (!isCollaborating) return;
+  
+  const currentState = getState();
+  console.log('Force syncing guest assignments to Firebase...');
+  
+  // Save current state immediately
+  database.ref('seatingPlan').set({
+    ...currentState,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: currentUserId
+  }).then(() => {
+    console.log('Force sync completed - guest assignments saved');
+    lastSavedState = JSON.stringify(currentState);
+  }).catch((error) => {
+    console.error('Error during force sync:', error);
+  });
+}
+
+// Make forceSyncGuestAssignments available globally
+window.forceSyncGuestAssignments = forceSyncGuestAssignments; 
