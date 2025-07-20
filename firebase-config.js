@@ -58,6 +58,7 @@ let saveTimeout = null;
 let lastSavedState = null;
 let isUpdatingFromFirebase = false; // Flag to prevent save loops
 let lastUpdateTime = 0; // Track when we last received an update
+let isInitialLoad = false; // Flag to prevent conflicting messages during initial load
 
 // Save state to Firebase
 function saveToFirebase(state) {
@@ -204,7 +205,10 @@ function listenForUpdates() {
         } else if (shouldUpdate) {
           console.log('Update skipped - too soon since last update');
         } else {
-          console.log('No meaningful changes detected in incoming data');
+          // Only log if not during initial load to prevent conflicting messages
+          if (!window.isInitialLoad) {
+            console.log('No meaningful changes detected in incoming data');
+          }
         }
       }
     }

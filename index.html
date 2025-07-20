@@ -2886,17 +2886,20 @@ unassignedElements.forEach(person => {
         // Show success message
         showCollaborationMessage('Collaboration started! Share this link with your fiancé to work together.', 'success');
         
-        // Save current state to Firebase first, then load from Firebase
+        // Save current state to Firebase first
         const currentState = getState();
         saveToFirebase(currentState);
         
-        // Wait a moment for the save to complete, then check Firebase
-        setTimeout(() => {
-          database.ref('seatingPlan').once('value').then((snapshot) => {
-            const data = snapshot.val();
-            if (data && data.tables && Object.keys(data.tables).length > 0) {
-              // Only merge if we don't have any tables yet (first time setup)
-              if (currentState.tables.length === 0) {
+        // Only check Firebase if we don't have any tables (first time setup)
+        if (currentState.tables.length === 0) {
+          // Set initial load flag to prevent conflicting messages
+          window.isInitialLoad = true;
+          
+          // Wait a moment for the save to complete, then check Firebase
+          setTimeout(() => {
+            database.ref('seatingPlan').once('value').then((snapshot) => {
+              const data = snapshot.val();
+              if (data && data.tables && Object.keys(data.tables).length > 0) {
                 const { lastUpdated, updatedBy, ...cleanData } = data;
                 importState(JSON.stringify(cleanData));
                 console.log('Loaded initial data from Firebase (no local tables)');
@@ -2906,17 +2909,24 @@ unassignedElements.forEach(person => {
                   updateCounts();
                   updateAssignedGuestsDisplay();
                   updateAllGuestDisplays();
+                  
+                  // Clear initial load flag
+                  window.isInitialLoad = false;
                 }, 100);
               } else {
-                console.log('Keeping current state - already have tables');
+                console.log('Firebase is empty, keeping current state');
+                // Clear initial load flag
+                window.isInitialLoad = false;
               }
-            } else {
-              console.log('Firebase is empty, keeping current state');
-            }
-          }).catch((error) => {
-            console.error('Error checking Firebase data:', error);
-          });
-        }, 1000); // Wait 1 second for save to complete
+            }).catch((error) => {
+              console.error('Error checking Firebase data:', error);
+            });
+          }, 1000); // Wait 1 second for save to complete
+        } else {
+          console.log('Keeping current state - already have tables');
+          // Clear initial load flag
+          window.isInitialLoad = false;
+        }
         
       } else {
         // Stop collaboration
