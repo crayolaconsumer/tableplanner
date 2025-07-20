@@ -136,10 +136,36 @@ function listenForUpdates() {
           mergedData.tables = cleanData.tables;
           console.log(`Updating all tables - count changed from ${currentTablesCount} to ${incomingTablesCount}`);
         } else if (currentTablesCount === 0 && incomingTablesCount > 0) {
-          // If we have no tables and incoming has tables, use incoming
+          // If we have no tables and incoming has tables, validate the data first
+          console.log(`Validating incoming data before initial load...`);
+          
+          // Check if incoming data has wrong guest assignments
+          let hasWrongData = false;
+          for (const tableId in cleanData.tables) {
+            const table = cleanData.tables[tableId];
+            if (table.name === 'Head Table - Long Way') {
+              const guests = table.seats?.map(s => s.guest).filter(g => g) || [];
+              const wrongGuestSet = ['Matthew Molnar', 'Sophie Osborne', 'Shamaurie Cunningham', 'Ameera Khan', 'Harry May', 'Callum Day', 'Ross Phelps', 'Ronnie Morgan'].sort();
+              const incomingGuests = [...guests].sort();
+              
+              if (JSON.stringify(incomingGuests) === JSON.stringify(wrongGuestSet)) {
+                console.log('BLOCKING INITIAL LOAD: Firebase contains wrong Head Table data');
+                console.log('Wrong guests detected:', incomingGuests);
+                hasWrongData = true;
+                break;
+              }
+            }
+          }
+          
+          if (hasWrongData) {
+            console.log('Rejecting initial load due to wrong data - keeping empty state');
+            return; // Don't load the wrong data
+          }
+          
+          // Data is valid, proceed with load
           shouldUpdate = true;
           mergedData.tables = cleanData.tables;
-          console.log(`Loading tables from Firebase (no local tables)`);
+          console.log(`Loading tables from Firebase (no local tables) - data validated`);
         } else {
           // Check each table for significant changes (not just minor differences)
           for (const tableId in cleanData.tables) {
@@ -438,4 +464,63 @@ function forceOverrideHeadTable() {
 }
 
 // Make force override function available globally
-window.forceOverrideHeadTable = forceOverrideHeadTable; 
+window.forceOverrideHeadTable = forceOverrideHeadTable;
+
+// Emergency fix: Clear Firebase and force correct data
+function emergencyFixFirebase() {
+  if (!isCollaborating) return;
+  
+  console.log('EMERGENCY FIX: Clearing Firebase and forcing correct data...');
+  
+  // First, clear Firebase completely
+  database.ref('seatingPlan').remove().then(() => {
+    console.log('Firebase cleared');
+    
+    // Wait a moment, then push correct data
+    setTimeout(() => {
+      const currentState = getState();
+      
+      // Ensure Head Table has correct guests
+      for (const tableId in currentState.tables) {
+        const table = currentState.tables[tableId];
+        if (table.name === 'Head Table - Long Way') {
+          const correctGuests = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'];
+          
+          // Clear and reassign
+          table.seats.forEach(seat => { seat.guest = null; });
+          correctGuests.forEach((guest, index) => {
+            if (table.seats[index]) {
+              table.seats[index].guest = guest;
+            }
+          });
+          
+          console.log('Head Table corrected with:', correctGuests);
+          break;
+        }
+      }
+      
+      // Push to Firebase
+      database.ref('seatingPlan').set({
+        ...currentState,
+        lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+        updatedBy: currentUserId,
+        emergencyFix: true
+      }).then(() => {
+        console.log('EMERGENCY FIX COMPLETE: Correct data pushed to Firebase');
+        lastSavedState = JSON.stringify(currentState);
+        
+        // Update displays
+        updateCounts();
+        updateAssignedGuestsDisplay();
+        updateAllGuestDisplays();
+      }).catch((error) => {
+        console.error('Error in emergency fix:', error);
+      });
+    }, 1000);
+  }).catch((error) => {
+    console.error('Error clearing Firebase:', error);
+  });
+}
+
+// Make emergency fix available globally
+window.emergencyFixFirebase = emergencyFixFirebase; 

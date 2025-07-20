@@ -3034,15 +3034,10 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Use force push to override wrong data with correct data
-        forcePushCorrectData();
+        // Use emergency fix to clear Firebase and force correct data
+        emergencyFixFirebase();
         
-        // Force refresh all displays
-        updateCounts();
-        updateAssignedGuestsDisplay();
-        updateAllGuestDisplays();
-        
-        showCollaborationMessage('Correct data force-pushed! Overriding wrong assignments.', 'success');
+        showCollaborationMessage('Emergency fix applied! Firebase cleared and correct data pushed.', 'success');
       }
     });
     
