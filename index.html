@@ -2947,11 +2947,11 @@ unassignedElements.forEach(person => {
       }
     }
     
-    // Hook into existing functions to auto-save
+    // Hook into existing functions to auto-save (less aggressive)
     const originalUpdateCounts = updateCounts;
     updateCounts = function() {
       originalUpdateCounts();
-      autoSaveToFirebase();
+      // Don't auto-save on every count update
     };
     
     // Hook into guest assignment

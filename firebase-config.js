@@ -53,19 +53,37 @@ function initCollaboration() {
   console.log('Collaboration initialized for user:', currentUserId);
 }
 
+// Debounce save operations to prevent feedback loops
+let saveTimeout = null;
+let lastSavedState = null;
+
 // Save state to Firebase
 function saveToFirebase(state) {
   if (!isCollaborating) return;
   
-  database.ref('seatingPlan').set({
-    ...state,
-    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
-    updatedBy: currentUserId
-  }).then(() => {
-    console.log('State saved to Firebase');
-  }).catch((error) => {
-    console.error('Error saving to Firebase:', error);
-  });
+  // Debounce saves to prevent rapid-fire updates
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  
+  // Only save if state actually changed
+  const stateString = JSON.stringify(state);
+  if (stateString === lastSavedState) {
+    return;
+  }
+  
+  saveTimeout = setTimeout(() => {
+    database.ref('seatingPlan').set({
+      ...state,
+      lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+      updatedBy: currentUserId
+    }).then(() => {
+      console.log('State saved to Firebase');
+      lastSavedState = stateString;
+    }).catch((error) => {
+      console.error('Error saving to Firebase:', error);
+    });
+  }, 1000); // Wait 1 second before saving
 }
 
 // Load state from Firebase
@@ -97,8 +115,19 @@ function listenForUpdates() {
       // Only update if it's not our own update
       if (data.updatedBy !== currentUserId) {
         const { lastUpdated, updatedBy, ...cleanData } = data;
-        importState(JSON.stringify(cleanData));
-        console.log('Received real-time update from another user');
+        
+        // Prevent feedback loops by checking if this is actually different
+        const currentState = getState();
+        const newStateString = JSON.stringify(cleanData);
+        const currentStateString = JSON.stringify(currentState);
+        
+        if (newStateString !== currentStateString) {
+          importState(newStateString);
+          console.log('Received real-time update from another user');
+          
+          // Update our last saved state to prevent re-saving
+          lastSavedState = newStateString;
+        }
       }
     }
   });
