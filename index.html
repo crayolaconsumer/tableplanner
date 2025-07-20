@@ -1033,13 +1033,10 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             guestItem.addEventListener('dragleave', handleGuestDragLeave);
             guestItem.addEventListener('drop', handleGuestDrop);
             
-            // Add touch support for guest reordering (only on drag handle)
-            const dragHandle = guestItem.querySelector('.drag-handle-guest');
-            if (dragHandle) {
-              dragHandle.addEventListener('touchstart', handleGuestTouchStart, { passive: true });
-              dragHandle.addEventListener('touchmove', handleGuestTouchMove, { passive: true });
-              dragHandle.addEventListener('touchend', handleGuestTouchEnd, { passive: true });
-            }
+            // Add touch support for guest reordering (touch and hold on the guest item)
+            guestItem.addEventListener('touchstart', handleGuestTouchStart, { passive: true });
+            guestItem.addEventListener('touchmove', handleGuestTouchMove, { passive: true });
+            guestItem.addEventListener('touchend', handleGuestTouchEnd, { passive: true });
             
             // Add hover highlighting for assigned guests
             const guestNameSpan = guestItem.querySelector('.guest-name');
@@ -1114,7 +1111,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             }
             
             editBtn.addEventListener('click', handleEditClick);
-            editBtn.addEventListener('touchend', handleEditClick, { passive: false });
+            editBtn.addEventListener('touchend', handleEditClick, { passive: true });
             
             // Add click and touch handlers to remove guest from table
             const removeBtn = guestItem.querySelector('.remove-guest-btn');
@@ -1146,7 +1143,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             }
             
             removeBtn.addEventListener('click', handleRemoveClick);
-            removeBtn.addEventListener('touchend', handleRemoveClick, { passive: false });
+            removeBtn.addEventListener('touchend', handleRemoveClick, { passive: true });
           } else {
             // Empty seat
             guestItem.innerHTML = `
@@ -1243,7 +1240,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
           content.appendChild(guestItem);
         });
         
-        // Add click handler to expand/collapse table
+                // Add click handler to expand/collapse table (works for both desktop and mobile)
         header.addEventListener('click', function(e) {
           // Don't expand/collapse if clicking on control buttons
           if (e.target.classList.contains('remove-guest-btn') || 
@@ -1251,6 +1248,12 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
               e.target.closest('.guest-controls')) {
             return;
           }
+          
+          // On mobile, only handle click if we weren't dragging
+          if (window.innerWidth <= 768 && tableTouchDragging && tableTouchElement === tableDiv) {
+            return;
+          }
+          
           content.classList.toggle('expanded');
           header.classList.toggle('expanded');
           
@@ -1284,29 +1287,6 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             expandedTables.add(tableData.name);
           } else {
             expandedTables.delete(tableData.name);
-          }
-        });
-        
-        // Add a separate click handler for mobile that works with touch
-        header.addEventListener('click', function(e) {
-          // Don't expand/collapse if clicking on control buttons
-          if (e.target.classList.contains('remove-guest-btn') || 
-              e.target.classList.contains('edit-guest-btn') ||
-              e.target.closest('.guest-controls')) {
-            return;
-          }
-          
-          // Only handle click if we weren't dragging
-          if (!tableTouchDragging) {
-            content.classList.toggle('expanded');
-            header.classList.toggle('expanded');
-            
-            // Store expanded state
-            if (content.classList.contains('expanded')) {
-              expandedTables.add(tableData.name);
-            } else {
-              expandedTables.delete(tableData.name);
-            }
           }
         });
         
@@ -1658,7 +1638,7 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
       const touch = e.touches[0];
       guestTouchStartY = touch.clientY;
       guestTouchDragging = false;
-      guestTouchElement = this.closest('.guest-item'); // Get the guest item, not the handle
+      guestTouchElement = this; // This is now the guest item directly
     }
     
     function handleGuestTouchMove(e) {

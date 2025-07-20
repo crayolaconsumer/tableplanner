@@ -1902,6 +1902,29 @@ h1, h2, h5 {
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
+    position: relative;
+  }
+  
+  /* Add touch and hold visual feedback */
+  .guest-item::before {
+    content: 'Hold to reorder';
+    position: absolute;
+    left: 50%;
+    top: -30px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  
+  .guest-item.dragging::before {
+    opacity: 1;
   }
   
   /* Fix guest info layout */
@@ -1973,26 +1996,34 @@ h1, h2, h5 {
     z-index: 1000;
   }
   
-  /* Drag handles should always allow dragging */
+  /* Hide drag handles on mobile - using touch and hold instead */
   .drag-handle-guest {
-    touch-action: manipulation;
-    cursor: grab;
-    padding: 8px;
-    border-radius: 4px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    transition: all 0.2s ease;
+    display: none;
   }
   
-  .drag-handle-guest:active {
-    cursor: grabbing;
-    background-color: #e9ecef;
-    transform: scale(1.1);
-  }
-  
-  .drag-handle-guest:hover {
-    background-color: #e9ecef;
-    border-color: #adb5bd;
+  /* Show drag handles on desktop only */
+  @media (min-width: 769px) {
+    .drag-handle-guest {
+      display: inline-block;
+      touch-action: manipulation;
+      cursor: grab;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      transition: all 0.2s ease;
+    }
+    
+    .drag-handle-guest:active {
+      cursor: grabbing;
+      background-color: #e9ecef;
+      transform: scale(1.1);
+    }
+    
+    .drag-handle-guest:hover {
+      background-color: #e9ecef;
+      border-color: #adb5bd;
+    }
   }
   
   /* Enable scrolling for the assigned guests container */
