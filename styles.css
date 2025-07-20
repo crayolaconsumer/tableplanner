@@ -1953,14 +1953,46 @@ h1, h2, h5 {
     z-index: 1000;
   }
   
+  /* Prevent canvas panning when dragging tables or guests */
+  .table.card {
+    touch-action: manipulation;
+  }
+  
+  .table.card .card-header {
+    touch-action: manipulation;
+  }
+  
+  .seat {
+    touch-action: manipulation;
+  }
+  
+  /* When dragging, prevent all canvas interactions */
+  .table.card.dragging,
+  .seat.dragging {
+    touch-action: none;
+    z-index: 1000;
+  }
+  
   /* Drag handles should always allow dragging */
   .drag-handle-guest {
     touch-action: manipulation;
     cursor: grab;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
   }
   
   .drag-handle-guest:active {
     cursor: grabbing;
+    background-color: #e9ecef;
+    transform: scale(1.1);
+  }
+  
+  .drag-handle-guest:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
   }
   
   /* Enable scrolling for the assigned guests container */
@@ -1984,12 +2016,19 @@ h1, h2, h5 {
   .table-assignment-header::after {
     content: '▼';
     position: absolute;
-    right: 12px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 12px;
+    font-size: 10px;
     color: #6c757d;
     transition: transform 0.2s ease;
+    z-index: 1;
+  }
+  
+  /* Ensure guest count doesn't overlap with arrow */
+  .table-assignment-header .guest-count {
+    margin-right: 20px;
+    flex-shrink: 0;
   }
   
   .table-assignment-header.expanded::after {
@@ -2031,6 +2070,26 @@ h1, h2, h5 {
     border-radius: 6px;
   }
   
+  /* Enhanced visual feedback for canvas dragging */
+  .seat.dragging {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+    border: 2px solid #007bff;
+    z-index: 1000;
+  }
+  
+  .seat.drag-over {
+    background-color: #e7f3ff !important;
+    border: 2px dashed #007bff !important;
+    transform: scale(1.05);
+  }
+  
+  .table.card.dragging {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    border: 2px solid #007bff;
+  }
+  
   /* Reduce padding between mobile controls and buttons */
   .mobile-controls {
     margin-bottom: 8px;
@@ -2062,6 +2121,26 @@ h1, h2, h5 {
   .col-md-8.text-end .btn {
     margin: 0 !important;
     flex-shrink: 0;
+  }
+  
+  /* Fix table buttons on canvas for mobile */
+  .table.card .card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .table.card .header-controls {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .table.card .header-controls .btn {
+    font-size: 12px;
+    padding: 6px 8px;
+    min-height: 32px;
   }
   
   /* Better mobile controls spacing */

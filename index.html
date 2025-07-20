@@ -1019,23 +1019,28 @@ Mike Brown,mike.brown@email.com,555-0127,Vegan,Yes,Childhood friend`;
             `;
             
             // Make assigned guests draggable for reordering and moving to unassigned
-            guestItem.draggable = true;
+            guestItem.draggable = false; // Disable general dragging
             guestItem.dataset.guestName = guest.name;
             guestItem.dataset.seatIndex = guest.seatIndex;
             guestItem.dataset.tableName = tableData.name;
             guestItem.dataset.personId = guest.personElement.id;
             
-            guestItem.addEventListener('dragstart', handleGuestDragStart);
-            guestItem.addEventListener('dragend', handleGuestDragEnd);
+            // Add drag and drop event listeners to drag handle only
+            const dragHandle = guestItem.querySelector('.drag-handle-guest');
+            if (dragHandle) {
+              dragHandle.draggable = true;
+              dragHandle.addEventListener('dragstart', handleGuestDragStart);
+              dragHandle.addEventListener('dragend', handleGuestDragEnd);
+              dragHandle.addEventListener('touchstart', handleGuestTouchStart, { passive: false });
+              dragHandle.addEventListener('touchmove', handleGuestTouchMove, { passive: false });
+              dragHandle.addEventListener('touchend', handleGuestTouchEnd, { passive: false });
+            }
+            
+            // Add drop zone listeners to the guest item
             guestItem.addEventListener('dragover', handleGuestDragOver);
             guestItem.addEventListener('dragenter', handleGuestDragEnter);
             guestItem.addEventListener('dragleave', handleGuestDragLeave);
             guestItem.addEventListener('drop', handleGuestDrop);
-            
-            // Add touch support for mobile reordering
-            guestItem.addEventListener('touchstart', handleGuestTouchStart, { passive: false });
-            guestItem.addEventListener('touchmove', handleGuestTouchMove, { passive: false });
-            guestItem.addEventListener('touchend', handleGuestTouchEnd, { passive: false });
             
             // Add hover highlighting for assigned guests
             const guestNameSpan = guestItem.querySelector('.guest-name');
