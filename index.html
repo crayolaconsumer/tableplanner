@@ -2463,6 +2463,8 @@ unassignedElements.forEach(person => {
          const seatCount = parseInt(table.seatCount);
          if (table.tableType === "circle") {
             createCircleTable(tableId, table.tableName, seatCount, true, table.left, table.top);
+         } else if (table.tableType === "rectangle-long") {
+            createLongRectangleTable(tableId, table.tableName, seatCount, true, table.left, table.top);
          } else {
             createRectangleTable(tableId, table.tableName, seatCount, true, table.left, table.top);
          }
