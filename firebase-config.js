@@ -93,7 +93,7 @@ function listenForUpdates() {
   
   database.ref('seatingPlan').on('value', (snapshot) => {
     const data = snapshot.val();
-    if (data && data.tables && data.lastUpdated) {
+    if (data && data.tables && Object.keys(data.tables).length > 0 && data.lastUpdated) {
       // Only update if it's not our own update
       if (data.updatedBy !== currentUserId) {
         const { lastUpdated, updatedBy, ...cleanData } = data;
@@ -136,7 +136,15 @@ function updatePresence() {
 // Clean up old presence data
 function cleanupPresence() {
   const cutoff = Date.now() - (5 * 60 * 1000); // 5 minutes ago
-  database.ref('presence').orderByChild('lastSeen').endAt(cutoff).remove();
+  database.ref('presence').orderByChild('lastSeen').endAt(cutoff).once('value').then((snapshot) => {
+    const updates = {};
+    snapshot.forEach((childSnapshot) => {
+      updates[childSnapshot.key] = null;
+    });
+    if (Object.keys(updates).length > 0) {
+      database.ref('presence').update(updates);
+    }
+  });
 }
 
 // Start presence cleanup every minute

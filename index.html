@@ -2884,20 +2884,22 @@ unassignedElements.forEach(person => {
         const currentState = getState();
         saveToFirebase(currentState);
         
-        // Only load from Firebase if there's actually data there (not empty)
-        database.ref('seatingPlan').once('value').then((snapshot) => {
-          const data = snapshot.val();
-          if (data && data.tables && Object.keys(data.tables).length > 0) {
-            // Only load if there's meaningful data in Firebase
-            const { lastUpdated, updatedBy, ...cleanData } = data;
-            importState(JSON.stringify(cleanData));
-            console.log('Loaded existing data from Firebase');
-          } else {
-            console.log('Firebase is empty, keeping current state');
-          }
-        }).catch((error) => {
-          console.error('Error checking Firebase data:', error);
-        });
+        // Wait a moment for the save to complete, then check Firebase
+        setTimeout(() => {
+          database.ref('seatingPlan').once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data && data.tables && Object.keys(data.tables).length > 0) {
+              // Only load if there's meaningful data in Firebase
+              const { lastUpdated, updatedBy, ...cleanData } = data;
+              importState(JSON.stringify(cleanData));
+              console.log('Loaded existing data from Firebase');
+            } else {
+              console.log('Firebase is empty, keeping current state');
+            }
+          }).catch((error) => {
+            console.error('Error checking Firebase data:', error);
+          });
+        }, 500); // Wait 500ms for save to complete
         
       } else {
         // Stop collaboration
