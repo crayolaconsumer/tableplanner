@@ -134,6 +134,11 @@ function listenForUpdates() {
           shouldUpdate = true;
           mergedData.tables = cleanData.tables;
           console.log(`Updating all tables - count changed from ${currentTablesCount} to ${incomingTablesCount}`);
+        } else if (currentTablesCount === 0 && incomingTablesCount > 0) {
+          // If we have no tables and incoming has tables, use incoming
+          shouldUpdate = true;
+          mergedData.tables = cleanData.tables;
+          console.log(`Loading tables from Firebase (no local tables)`);
         } else {
           // Check each table for significant changes (not just minor differences)
           for (const tableId in cleanData.tables) {

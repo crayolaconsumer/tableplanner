@@ -2895,27 +2895,21 @@ unassignedElements.forEach(person => {
           database.ref('seatingPlan').once('value').then((snapshot) => {
             const data = snapshot.val();
             if (data && data.tables && Object.keys(data.tables).length > 0) {
-              // Smart merge: preserve our current data and only add missing tables
-              const { lastUpdated, updatedBy, ...cleanData } = data;
-              const mergedData = { ...currentState };
-              
-              // Only add tables we don't have
-              for (const tableId in cleanData.tables) {
-                if (!mergedData.tables[tableId]) {
-                  mergedData.tables[tableId] = cleanData.tables[tableId];
-                  console.log(`Added missing table ${tableId} from Firebase`);
-                }
+              // Only merge if we don't have any tables yet (first time setup)
+              if (currentState.tables.length === 0) {
+                const { lastUpdated, updatedBy, ...cleanData } = data;
+                importState(JSON.stringify(cleanData));
+                console.log('Loaded initial data from Firebase (no local tables)');
+              } else {
+                console.log('Keeping current state - already have tables');
               }
-              
-              importState(JSON.stringify(mergedData));
-              console.log('Merged existing data from Firebase');
             } else {
               console.log('Firebase is empty, keeping current state');
             }
           }).catch((error) => {
             console.error('Error checking Firebase data:', error);
           });
-        }, 500); // Wait 500ms for save to complete
+        }, 1000); // Wait 1 second for save to complete
         
       } else {
         // Stop collaboration
