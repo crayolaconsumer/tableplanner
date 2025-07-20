@@ -235,12 +235,19 @@ function listenForUpdates() {
         if (shouldUpdate && (now - lastUpdateTime) > 1000) { // Reduced to 1 second cooldown for faster sync
           lastUpdateTime = now;
           
-          // TIMESTAMP VALIDATION: Only accept updates that are newer than our last save
-          if (data.lastUpdated && lastSavedState) {
-            const lastSavedTime = JSON.parse(lastSavedState).lastUpdated || 0;
-            if (data.lastUpdated <= lastSavedTime) {
-              console.log('Ignoring older update - our data is more recent');
-              return;
+          // PRIORITY VALIDATION: Force correct data takes absolute priority
+          if (data.forceCorrect && data.priority === 999999) {
+            console.log('FORCE CORRECT DATA DETECTED: Accepting immediately');
+            shouldUpdate = true;
+            mergedData.tables = cleanData.tables;
+          } else {
+            // TIMESTAMP VALIDATION: Only accept updates that are newer than our last save
+            if (data.lastUpdated && lastSavedState) {
+              const lastSavedTime = JSON.parse(lastSavedState).lastUpdated || 0;
+              if (data.lastUpdated <= lastSavedTime) {
+                console.log('Ignoring older update - our data is more recent');
+                return;
+              }
             }
           }
           
@@ -537,9 +544,14 @@ function nuclearReset() {
     presenceRef.remove();
   }
   
-  // Clear all Firebase data
-  database.ref().remove().then(() => {
-    console.log('All Firebase data cleared');
+  // Clear only the seating plan and presence data (not entire database)
+  const clearPromises = [
+    database.ref('seatingPlan').remove(),
+    database.ref('presence').remove()
+  ];
+  
+  Promise.all(clearPromises).then(() => {
+    console.log('Seating plan and presence data cleared');
     
     // Wait 2 seconds for complete clear
     setTimeout(() => {
@@ -652,4 +664,59 @@ function forceClientReload() {
 }
 
 // Make force reload available globally
-window.forceClientReload = forceClientReload; 
+window.forceClientReload = forceClientReload;
+
+// Simple force sync with correct data
+function forceCorrectSync() {
+  if (!isCollaborating) return;
+  
+  console.log('FORCE CORRECT SYNC: Pushing correct data with high priority...');
+  
+  const currentState = getState();
+  
+  // Ensure Head Table has correct guests
+  for (const tableId in currentState.tables) {
+    const table = currentState.tables[tableId];
+    if (table.name === 'Head Table - Long Way') {
+      const correctGuests = ['Alan Cooper', 'Amy Ridge', 'Connor Daly', 'James Fitton', 'Laura Fitton', 'Lillith May', 'Mark Fitton', 'Chris Slaffa'];
+      
+      // Clear and reassign
+      table.seats.forEach(seat => { seat.guest = null; });
+      correctGuests.forEach((guest, index) => {
+        if (table.seats[index]) {
+          table.seats[index].guest = guest;
+        }
+      });
+      
+      console.log('Head Table corrected with:', correctGuests);
+      break;
+    }
+  }
+  
+  // Push with very high priority timestamp
+  const highPriorityData = {
+    ...currentState,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: currentUserId,
+    forceCorrect: true,
+    priority: 999999,
+    timestamp: Date.now()
+  };
+  
+  database.ref('seatingPlan').set(highPriorityData).then(() => {
+    console.log('FORCE CORRECT SYNC COMPLETE: High priority data pushed');
+    lastSavedState = JSON.stringify(highPriorityData);
+    
+    // Update displays
+    updateCounts();
+    updateAssignedGuestsDisplay();
+    updateAllGuestDisplays();
+    
+    showCollaborationMessage('Correct data force-synced with high priority!', 'success');
+  }).catch((error) => {
+    console.error('Error in force correct sync:', error);
+  });
+}
+
+// Make force correct sync available globally
+window.forceCorrectSync = forceCorrectSync; 

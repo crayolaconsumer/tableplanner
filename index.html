@@ -3034,8 +3034,8 @@ unassignedElements.forEach(person => {
     // Manual sync button
     document.getElementById('syncBtn').addEventListener('click', function() {
       if (isCollaborating) {
-        // Use nuclear reset for complete collaboration reset
-        nuclearReset();
+        // Use force correct sync with high priority
+        forceCorrectSync();
       }
     });
     
