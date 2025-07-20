@@ -1,11 +1,35 @@
 
 # Wedding Table Plan Creator
 
-A user‐friendly web application that helps you plan your wedding seating arrangement. Create circle or rectangle tables, specify the number of seats, manage guest names (with CSV import or manual addition), and drag/drop them into seats.
+A user‐friendly web application that helps you plan your wedding seating arrangement with **real-time collaboration** support. Create circle or rectangle tables, specify the number of seats, manage guest names (with CSV import or manual addition), and drag/drop them into seats.
+
+## ✨ New: Real-time Collaboration
+
+**Work together with your fiancé on the same seating plan simultaneously!**
+
+- **Live Updates**: Changes sync instantly between all users
+- **No Login Required**: Just share the URL
+- **User Presence**: See how many people are currently editing
+- **Free Setup**: Uses Firebase's generous free tier
+- **Mobile Friendly**: Works on phones and tablets
+
+### Quick Start:
+1. Click **"Start Collaboration"** button
+2. Share the URL with your fiancé
+3. Both can edit simultaneously
+4. Changes appear in real-time
+
+*See `firebase-setup.md` for detailed setup instructions.*
 
 When a seat is occupied, it shows a short label (e.g. an icon or initials) to keep the interface clean. For full occupant details (e.g., editing or removing a guest), open the seat’s assignment modal.
 
 ## Features
+
+- **Real-time Collaboration**  
+  - Work together with your fiancé simultaneously
+  - Live updates sync instantly between all users
+  - No login required - just share the URL
+  - See how many people are currently editing
 
 - **Zoom & Pan Canvas**  
   - Scroll the mouse wheel on the table plan area to zoom in or out.  

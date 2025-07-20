@@ -2234,4 +2234,112 @@ h1, h2, h5 {
   #controls {
     margin-bottom: 16px;
   }
+}
+
+/* ============================
+   Collaboration Styles
+============================ */
+
+.collaboration-active {
+  border: 2px solid #28a745 !important;
+  box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+}
+
+.collaboration-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: #28a745;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 1000;
+  animation: collaboration-pulse 2s infinite;
+}
+
+@keyframes collaboration-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+#collaborateBtn {
+  transition: all 0.3s ease;
+}
+
+#collaborateBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#collaborateBtn.btn-success {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  border-color: #28a745;
+}
+
+#collaborateBtn.btn-success:hover {
+  background: linear-gradient(45deg, #218838, #1ea085);
+  border-color: #1e7e34;
+}
+
+/* Collaboration status indicator */
+.collaboration-status {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(40, 167, 69, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Real-time update indicator */
+.real-time-update {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(40, 167, 69, 0.9);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 1001;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+/* Mobile collaboration styles */
+@media (max-width: 767px) {
+  .collaboration-status {
+    bottom: 10px;
+    right: 10px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  
+  .real-time-update {
+    width: 90%;
+    max-width: 300px;
+    font-size: 13px;
+    padding: 12px 20px;
+  }
+  
+  #collaborateBtn {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
 } 

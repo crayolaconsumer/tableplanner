@@ -8,6 +8,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <!-- Firebase Config -->
+  <script src="firebase-config.js"></script>
 
 </head>
 <body>
@@ -27,6 +34,9 @@
           <button type="button" class="btn btn-success ms-2" id="exportStateBtn">Export Plan</button>
           <button type="button" class="btn btn-info ms-2" id="importStateBtn">Import Plan</button>
           <button type="button" class="btn btn-warning ms-2" id="printPlanBtn">Print Plan</button>
+          <button type="button" class="btn btn-primary ms-2" id="collaborateBtn" title="Enable real-time collaboration">
+            <span id="collaborateIcon">🔗</span> <span id="collaborateText">Start Collaboration</span>
+          </button>
           <button type="button" class="btn btn-outline-secondary ms-2" id="download-template-btn" title="Download CSV template">
             📥 Template
           </button>
@@ -2849,6 +2859,135 @@ unassignedElements.forEach(person => {
     
     // Clean up any orphaned seats on page load
     cleanupOrphanedSeats();
+    
+    /* ============================
+       Real-time Collaboration
+    ============================ */
+    
+    // Collaboration button handler
+    document.getElementById('collaborateBtn').addEventListener('click', function() {
+      if (!isCollaborating) {
+        // Start collaboration
+        initCollaboration();
+        listenForUpdates();
+        loadFromFirebase();
+        
+        // Update button
+        document.getElementById('collaborateIcon').textContent = '🟢';
+        document.getElementById('collaborateText').textContent = 'Collaborating';
+        this.classList.remove('btn-primary');
+        this.classList.add('btn-success');
+        
+        // Show success message
+        showCollaborationMessage('Collaboration started! Share this link with your fiancé to work together.', 'success');
+        
+        // Auto-save current state
+        setTimeout(() => {
+          const state = getState();
+          saveToFirebase(state);
+        }, 1000);
+        
+      } else {
+        // Stop collaboration
+        isCollaborating = false;
+        if (presenceRef) {
+          presenceRef.remove();
+        }
+        
+        // Update button
+        document.getElementById('collaborateIcon').textContent = '🔗';
+        document.getElementById('collaborateText').textContent = 'Start Collaboration';
+        this.classList.remove('btn-success');
+        this.classList.add('btn-primary');
+        
+        showCollaborationMessage('Collaboration stopped.', 'info');
+      }
+    });
+    
+    // Show collaboration messages
+    function showCollaborationMessage(message, type = 'info') {
+      // Create message element
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `alert alert-${type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed`;
+      messageDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+      messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.body.appendChild(messageDiv);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (messageDiv.parentNode) {
+          messageDiv.remove();
+        }
+      }, 5000);
+    }
+    
+    // Auto-save to Firebase when changes are made
+    function autoSaveToFirebase() {
+      if (isCollaborating) {
+        const state = getState();
+        saveToFirebase(state);
+      }
+    }
+    
+    // Hook into existing functions to auto-save
+    const originalUpdateCounts = updateCounts;
+    updateCounts = function() {
+      originalUpdateCounts();
+      autoSaveToFirebase();
+    };
+    
+    // Hook into guest assignment
+    const originalAssignPersonToSeat = assignPersonToSeat;
+    assignPersonToSeat = function(person, seat) {
+      originalAssignPersonToSeat(person, seat);
+      autoSaveToFirebase();
+    };
+    
+    // Hook into table creation
+    const originalCreateTableContainer = createTableContainer;
+    createTableContainer = function(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos) {
+      originalCreateTableContainer(tableId, tableName, tableBodyElem, width, height, tableType, seatCount, leftPos, topPos);
+      autoSaveToFirebase();
+    };
+    
+    // Hook into guest removal
+    const originalClearSeatAssignment = clearSeatAssignment;
+    clearSeatAssignment = function() {
+      originalClearSeatAssignment();
+      autoSaveToFirebase();
+    };
+    
+    // Hook into random assignment
+    const originalRandomAssign = randomAssign;
+    randomAssign = function() {
+      originalRandomAssign();
+      autoSaveToFirebase();
+    };
+    
+    // Show online users count
+    function updateOnlineUsersDisplay() {
+      if (!isCollaborating) return;
+      
+      getOnlineUsers().then(users => {
+        const onlineCount = users.length;
+        const collaborateBtn = document.getElementById('collaborateBtn');
+        
+        if (onlineCount > 1) {
+          collaborateBtn.title = `Real-time collaboration active (${onlineCount} users online)`;
+          document.getElementById('collaborateText').textContent = `Collaborating (${onlineCount})`;
+        } else {
+          collaborateBtn.title = 'Real-time collaboration active';
+          document.getElementById('collaborateText').textContent = 'Collaborating';
+        }
+      });
+    }
+    
+    // Update online users display every 10 seconds
+    setInterval(updateOnlineUsersDisplay, 10000);
     
   </script>
 </body>
